@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Button, Modal, Form, Input, DatePicker, Select, message } from 'antd';
+import { Card, Table, Tag, Button, Modal, Form, Input, DatePicker, Select, message, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { RangePicker } = DatePicker;
 
@@ -34,6 +34,7 @@ const CalendarPage = () => {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [form] = Form.useForm<EventFormValues>();
 
   const fetchEvents = async () => {
@@ -93,6 +94,64 @@ const CalendarPage = () => {
     }
   };
 
+  const handleEditEvent = async (values: EventFormValues) => {
+    if (!editingEvent) return;
+
+    try {
+      const [startDate, endDate] = values.dateRange;
+      
+      const response = await fetch('/api/calendar', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editingEvent.id,
+          title: values.title,
+          description: values.description,
+          type: values.type,
+          startDate: startDate.format('YYYY-MM-DD HH:mm:ss'),
+          endDate: endDate.format('YYYY-MM-DD HH:mm:ss'),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('更新事件成功');
+        setIsModalVisible(false);
+        setEditingEvent(null);
+        form.resetFields();
+        fetchEvents();
+      } else {
+        message.error('更新事件失敗');
+      }
+    } catch (error) {
+      console.error('更新事件錯誤:', error);
+      message.error('更新事件失敗');
+    }
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    try {
+      const response = await fetch(`/api/calendar?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('刪除事件成功');
+        fetchEvents();
+      } else {
+        message.error('刪除事件失敗');
+      }
+    } catch (error) {
+      console.error('刪除事件錯誤:', error);
+      message.error('刪除事件失敗');
+    }
+  };
+
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case '會議':
@@ -106,6 +165,20 @@ const CalendarPage = () => {
       default:
         return 'default';
     }
+  };
+
+  const showEditModal = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    form.setFieldsValue({
+      title: event.title,
+      type: event.type,
+      dateRange: [
+        dayjs(event.startDate),
+        dayjs(event.endDate)
+      ],
+      description: event.description
+    });
+    setIsModalVisible(true);
   };
 
   const columns: ColumnsType<CalendarEvent> = [
@@ -156,6 +229,36 @@ const CalendarPage = () => {
       key: 'description',
       ellipsis: true,
     },
+    {
+      title: '操作',
+      key: 'action',
+      width: 120,
+      render: (_, record) => (
+        <div className="flex gap-2">
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => showEditModal(record)}
+          >
+            編輯
+          </Button>
+          <Popconfirm
+            title="確定要刪除這個事件嗎？"
+            onConfirm={() => handleDeleteEvent(record.id)}
+            okText="確定"
+            cancelText="取消"
+          >
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+            >
+              刪除
+            </Button>
+          </Popconfirm>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -167,7 +270,11 @@ const CalendarPage = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setIsModalVisible(true)}
+            onClick={() => {
+              setEditingEvent(null);
+              form.resetFields();
+              setIsModalVisible(true);
+            }}
           >
             新增事件
           </Button>
@@ -188,10 +295,11 @@ const CalendarPage = () => {
       </Card>
 
       <Modal
-        title="新增事件"
+        title={editingEvent ? '編輯事件' : '新增事件'}
         open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);
+          setEditingEvent(null);
           form.resetFields();
         }}
         onOk={() => form.submit()}
@@ -199,7 +307,7 @@ const CalendarPage = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleAddEvent}
+          onFinish={editingEvent ? handleEditEvent : handleAddEvent}
         >
           <Form.Item
             name="title"

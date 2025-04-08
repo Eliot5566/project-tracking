@@ -37,60 +37,43 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 exports.DELETE = exports.PUT = exports.POST = exports.GET = void 0;
-// src/app/api/tasks/route.ts
 var server_1 = require("next/server");
 var db_1 = require("@/lib/db");
-/**
- * GET /api/tasks
- */
+// 獲取所有專案
 function GET(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var searchParams, projectId, assignedTo, status, priority, sqlQuery, params, conditions, tasks, error_1;
+        var searchParams, status, sqlQuery, params, conditions, projects, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 2, , 3]);
                     searchParams = new URL(request.url).searchParams;
-                    projectId = searchParams.get('projectId');
-                    assignedTo = searchParams.get('assignedTo');
                     status = searchParams.get('status');
-                    priority = searchParams.get('priority');
-                    sqlQuery = "\n      SELECT t.*, \n             p.name as projectName,\n             tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n    ";
+                    sqlQuery = "\n      SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.managerId,\n        tm.name as managerName,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n      FROM Projects p\n      LEFT JOIN TeamMembers tm ON p.managerId = tm.id\n      LEFT JOIN Tasks t ON p.id = t.projectId\n    ";
                     params = [];
                     conditions = [];
-                    if (projectId) {
-                        conditions.push('t.projectId = @param0');
-                        params.push(parseInt(projectId));
-                    }
-                    if (assignedTo) {
-                        conditions.push('t.assignedTo = @param1');
-                        params.push(parseInt(assignedTo));
-                    }
                     if (status) {
-                        conditions.push('t.status = @param2');
+                        conditions.push('p.status = @param0');
                         params.push(status);
-                    }
-                    if (priority) {
-                        conditions.push('t.priority = @param3');
-                        params.push(priority);
                     }
                     if (conditions.length > 0) {
                         sqlQuery += ' WHERE ' + conditions.join(' AND ');
                     }
-                    sqlQuery += ' ORDER BY t.createdAt DESC';
+                    sqlQuery += ' GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt';
+                    sqlQuery += ' ORDER BY p.createdAt DESC';
                     return [4 /*yield*/, db_1.query(sqlQuery, params)];
                 case 1:
-                    tasks = _a.sent();
+                    projects = _a.sent();
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
-                            data: tasks
+                            data: projects
                         })];
                 case 2:
                     error_1 = _a.sent();
                     console.error('查詢錯誤:', error_1);
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: false,
-                            error: '獲取任務列表失敗'
+                            error: '獲取專案列表失敗'
                         }, { status: 500 })];
                 case 3: return [2 /*return*/];
             }
@@ -98,12 +81,10 @@ function GET(request) {
     });
 }
 exports.GET = GET;
-/**
- * POST /api/tasks
- */
+// 創建新專案
 function POST(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var body, title, description, projectId, assignedTo, status, priority, dueDate, sqlQuery, result, newTask, error_2;
+        var body, name, description, status, startDate, endDate, managerId, sqlQuery, result, newProject, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -111,32 +92,31 @@ function POST(request) {
                     return [4 /*yield*/, request.json()];
                 case 1:
                     body = _a.sent();
-                    title = body.title, description = body.description, projectId = body.projectId, assignedTo = body.assignedTo, status = body.status, priority = body.priority, dueDate = body.dueDate;
-                    sqlQuery = "\n      INSERT INTO Tasks (\n        title, description, projectId, assignedTo, status, priority, dueDate,\n        createdAt, updatedAt\n      )\n      VALUES (\n        @param0, @param1, @param2, @param3, @param4, @param5, @param6,\n        GETDATE(), GETDATE()\n      );\n      \n      SELECT SCOPE_IDENTITY() as id;\n    ";
+                    name = body.name, description = body.description, status = body.status, startDate = body.startDate, endDate = body.endDate, managerId = body.managerId;
+                    sqlQuery = "\n      INSERT INTO Projects (\n        name, description, status, startDate, endDate, managerId,\n        createdAt, updatedAt\n      )\n      VALUES (\n        @param0, @param1, @param2, @param3, @param4, @param5,\n        GETDATE(), GETDATE()\n      );\n      \n      SELECT SCOPE_IDENTITY() as id;\n    ";
                     return [4 /*yield*/, db_1.query(sqlQuery, [
-                            title,
+                            name,
                             description,
-                            projectId,
-                            assignedTo,
                             status,
-                            priority,
-                            dueDate
+                            startDate,
+                            endDate,
+                            managerId
                         ])];
                 case 2:
                     result = _a.sent();
-                    return [4 /*yield*/, db_1.query("SELECT t.*, p.name as projectName, tm.name as assignedToName\n       FROM Tasks t\n       LEFT JOIN Projects p ON t.projectId = p.id\n       LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n       WHERE t.id = @param0", [result[0].id])];
+                    return [4 /*yield*/, db_1.query("SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.managerId,\n        tm.name as managerName,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n       FROM Projects p\n       LEFT JOIN TeamMembers tm ON p.managerId = tm.id\n       LEFT JOIN Tasks t ON p.id = t.projectId\n       WHERE p.id = @param0\n       GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt", [result[0].id])];
                 case 3:
-                    newTask = _a.sent();
+                    newProject = _a.sent();
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
-                            data: newTask[0]
+                            data: newProject[0]
                         })];
                 case 4:
                     error_2 = _a.sent();
-                    console.error('創建任務失敗:', error_2);
+                    console.error('創建錯誤:', error_2);
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: false,
-                            error: '創建任務失敗'
+                            error: '創建專案失敗'
                         }, { status: 500 })];
                 case 5: return [2 /*return*/];
             }
@@ -144,10 +124,10 @@ function POST(request) {
     });
 }
 exports.POST = POST;
-// 更新任務
+// 更新專案
 function PUT(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var body, id, title, description, projectId, assignedTo, status, priority, dueDate, progress, finalProgress, sqlQuery, updatedTask, error_3;
+        var body, id, name, description, status, startDate, endDate, managerId, sqlQuery, updatedProject, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -155,38 +135,35 @@ function PUT(request) {
                     return [4 /*yield*/, request.json()];
                 case 1:
                     body = _a.sent();
-                    id = body.id, title = body.title, description = body.description, projectId = body.projectId, assignedTo = body.assignedTo, status = body.status, priority = body.priority, dueDate = body.dueDate, progress = body.progress;
-                    finalProgress = status === 'completed' ? 100 : progress || 0;
-                    sqlQuery = "\n      UPDATE Tasks\n      SET \n        title = @param0,\n        description = @param1,\n        projectId = @param2,\n        assignedTo = @param3,\n        status = @param4,\n        priority = @param5,\n        dueDate = @param6,\n        progress = @param7,\n        updatedAt = GETDATE()\n      WHERE id = @param8;\n      \n      SELECT \n        t.id,\n        t.title,\n        t.description,\n        t.projectId,\n        t.assignedTo,\n        t.status,\n        t.priority,\n        t.dueDate,\n        t.progress,\n        t.createdAt,\n        t.updatedAt,\n        p.name as projectName,\n        tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n      WHERE t.id = @param8;\n    ";
+                    id = body.id, name = body.name, description = body.description, status = body.status, startDate = body.startDate, endDate = body.endDate, managerId = body.managerId;
+                    sqlQuery = "\n      UPDATE Projects\n      SET \n        name = @param0,\n        description = @param1,\n        status = @param2,\n        startDate = @param3,\n        endDate = @param4,\n        managerId = @param5,\n        updatedAt = GETDATE()\n      WHERE id = @param6;\n      \n      SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.managerId,\n        tm.name as managerName,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n      FROM Projects p\n      LEFT JOIN TeamMembers tm ON p.managerId = tm.id\n      LEFT JOIN Tasks t ON p.id = t.projectId\n      WHERE p.id = @param6\n      GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt;\n    ";
                     return [4 /*yield*/, db_1.query(sqlQuery, [
-                            title,
+                            name,
                             description,
-                            projectId,
-                            assignedTo,
                             status,
-                            priority,
-                            dueDate,
-                            finalProgress,
+                            startDate,
+                            endDate,
+                            managerId,
                             id
                         ])];
                 case 2:
-                    updatedTask = _a.sent();
-                    if (updatedTask.length === 0) {
+                    updatedProject = _a.sent();
+                    if (updatedProject.length === 0) {
                         return [2 /*return*/, server_1.NextResponse.json({
                                 success: false,
-                                error: '找不到指定的任務'
+                                error: '找不到指定的專案'
                             }, { status: 404 })];
                     }
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
-                            data: updatedTask[0]
+                            data: updatedProject[0]
                         })];
                 case 3:
                     error_3 = _a.sent();
                     console.error('更新錯誤:', error_3);
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: false,
-                            error: '更新任務失敗'
+                            error: '更新專案失敗'
                         }, { status: 500 })];
                 case 4: return [2 /*return*/];
             }
@@ -194,44 +171,48 @@ function PUT(request) {
     });
 }
 exports.PUT = PUT;
-// 刪除任務
+// 刪除專案
 function DELETE(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var searchParams, id, sqlQuery, deletedTask, error_4;
+        var searchParams, id, projectToDelete, error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 2, , 3]);
+                    _a.trys.push([0, 3, , 4]);
                     searchParams = new URL(request.url).searchParams;
                     id = searchParams.get('id');
                     if (!id) {
                         return [2 /*return*/, server_1.NextResponse.json({
                                 success: false,
-                                error: '缺少任務 ID'
+                                error: '缺少專案 ID'
                             }, { status: 400 })];
                     }
-                    sqlQuery = "\n      DELETE FROM Tasks\n      WHERE id = @param0;\n      \n      SELECT t.*, p.name as projectName, tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n      WHERE t.id = @param0;\n    ";
-                    return [4 /*yield*/, db_1.query(sqlQuery, [id])];
+                    return [4 /*yield*/, db_1.query("SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n      FROM Projects p\n      LEFT JOIN Tasks t ON p.id = t.projectId\n      WHERE p.id = @param0\n      GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.createdAt, p.updatedAt", [id])];
                 case 1:
-                    deletedTask = _a.sent();
-                    if (deletedTask.length === 0) {
+                    projectToDelete = _a.sent();
+                    if (projectToDelete.length === 0) {
                         return [2 /*return*/, server_1.NextResponse.json({
                                 success: false,
-                                error: '找不到指定的任務'
+                                error: '找不到指定的專案'
                             }, { status: 404 })];
                     }
+                    // 執行刪除操作
+                    return [4 /*yield*/, db_1.query("DELETE FROM Projects WHERE id = @param0", [id])];
+                case 2:
+                    // 執行刪除操作
+                    _a.sent();
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
-                            data: deletedTask[0]
+                            data: projectToDelete[0]
                         })];
-                case 2:
+                case 3:
                     error_4 = _a.sent();
-                    console.error('刪除任務失敗:', error_4);
+                    console.error('刪除錯誤:', error_4);
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: false,
-                            error: '刪除任務失敗'
+                            error: '刪除專案失敗'
                         }, { status: 500 })];
-                case 3: return [2 /*return*/];
+                case 4: return [2 /*return*/];
             }
         });
     });

@@ -238,12 +238,12 @@ export default function TaskPage() {
         </Tag>
       ),
     },
-    {
-      title: '進度',
-      dataIndex: 'progress',
-      key: 'progress',
-      render: (progress: number) => `${progress}%`,
-    },
+    //{
+    //  title: '進度',
+    //  dataIndex: 'progress',
+    //  key: 'progress',
+    //  render: (progress: number) => `${progress}%`,
+    //},
     {
       title: '截止日期',
       dataIndex: 'dueDate',

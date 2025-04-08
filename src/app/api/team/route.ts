@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 interface TeamMember {
@@ -15,94 +15,57 @@ interface TeamMember {
 }
 
 // 獲取所有團隊成員
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const department = searchParams.get('department');
-    const status = searchParams.get('status');
-
-    let sqlQuery = `
+    const sqlQuery = `
       SELECT 
-        tm.*,
-        COUNT(t.id) as taskCount,
-        AVG(t.progress) as averageProgress
+        tm.id,
+        tm.name,
+        tm.role,
+        tm.email,
+        COUNT(DISTINCT p.id) as projectCount,
+        COUNT(DISTINCT t.id) as taskCount,
+        CASE 
+          WHEN COUNT(DISTINCT t.id) = 0 THEN 0
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(DISTINCT t.id) * 100
+        END as averageProgress,
+        tm.createdAt,
+        tm.updatedAt
       FROM TeamMembers tm
-      LEFT JOIN Tasks t ON tm.id = t.assignedTo
-    `;
-
-    const params: (string | number | null)[] = [];
-    const conditions: string[] = [];
-
-    if (department) {
-      conditions.push('tm.department = @param0');
-      params.push(department);
-    }
-
-    if (status) {
-      conditions.push('tm.status = @param1');
-      params.push(status);
-    }
-
-    if (conditions.length > 0) {
-      sqlQuery += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    sqlQuery += `
-      GROUP BY tm.id, tm.name, tm.role, tm.department, tm.status, tm.email, tm.createdAt, tm.updatedAt
+      LEFT JOIN Projects p ON tm.id = p.managerId
+      LEFT JOIN Tasks t ON tm.id = t.assigneeId
+      GROUP BY tm.id, tm.name, tm.role, tm.email, tm.createdAt, tm.updatedAt
       ORDER BY tm.createdAt DESC
     `;
-
-    const teamMembers = await query<TeamMember[]>(sqlQuery, params);
-
-    return NextResponse.json({
-      success: true,
-      data: teamMembers
-    });
+    const result = await query(sqlQuery);
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error('查詢錯誤:', error);
-    return NextResponse.json({
-      success: false,
-      error: '獲取團隊成員列表失敗'
-    }, { status: 500 });
+    console.error('獲取團隊成員失敗:', error);
+    return NextResponse.json({ success: false, error: '獲取團隊成員失敗' }, { status: 500 });
   }
 }
 
 // 創建新團隊成員
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, role, department, email } = body;
+    const { name, role, email } = await request.json();
+    
+    if (!name || !role || !email) {
+      return NextResponse.json({ success: false, error: '缺少必要參數' }, { status: 400 });
+    }
 
     const sqlQuery = `
-      INSERT INTO TeamMembers (name, role, department, status, email, createdAt, updatedAt)
-      VALUES (@param0, @param1, @param2, @param3, @param4, GETDATE(), GETDATE());
+      INSERT INTO TeamMembers (name, role, email, createdAt, updatedAt)
+      VALUES (@param0, @param1, @param2, GETDATE(), GETDATE());
       
       SELECT SCOPE_IDENTITY() as id;
     `;
-
-    const result = await query<{ id: number }[]>(sqlQuery, [
-      name,
-      role,
-      department,
-      'active',
-      email
-    ]);
-
-    const newMember = await query<TeamMember[]>(
-      `SELECT * FROM TeamMembers WHERE id = @param0`,
-      [result[0].id]
-    );
-
-    return NextResponse.json({
-      success: true,
-      data: newMember[0]
-    });
+    
+    await query(sqlQuery, [name, role, email]);
+    return NextResponse.json({ success: true, message: '添加團隊成員成功' });
   } catch (error) {
-    console.error('創建團隊成員失敗:', error);
-    return NextResponse.json({
-      success: false,
-      error: '創建團隊成員失敗'
-    }, { status: 500 });
+    console.error('添加團隊成員失敗:', error);
+    return NextResponse.json({ success: false, error: '添加團隊成員失敗' }, { status: 500 });
   }
 }
 

@@ -1,33 +1,15 @@
 "use client";
 
-import { 
-  Table, 
-  Button, 
-  Space, 
-  Tag, 
-  Typography, 
-  Card,
-  message,
-  Modal
-} from 'antd';
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined 
-} from '@ant-design/icons';
-import { useState, useEffect } from 'react';
-import TeamMemberForm from '../components/TeamMemberForm';
-
-const { Title } = Typography;
-const { confirm } = Modal;
+import { useEffect, useState } from 'react';
+import { Card, Table, Tag, Button, Modal, Form, Input, Select, message } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
 interface TeamMember {
   id: number;
   name: string;
   role: string;
-  department: string;
-  status: string;
   email: string;
+  projectCount: number;
   taskCount: number;
   averageProgress: number;
   createdAt: string;
@@ -37,247 +19,173 @@ interface TeamMember {
 interface TeamMemberFormData {
   name: string;
   role: string;
-  department: string;
   email: string;
 }
 
 export default function TeamPage() {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | undefined>();
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [form] = Form.useForm();
 
-  // 獲取團隊成員列表
-  const fetchTeamMembers = async () => {
-    setLoading(true);
+  const fetchMembers = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/team');
       const result = await response.json();
+      
       if (result.success) {
-        setTeamMembers(result.data);
+        setMembers(result.data);
       } else {
-        message.error('獲取團隊成員列表失敗');
+        message.error('獲取團隊成員失敗');
       }
     } catch (error) {
-      message.error('獲取團隊成員列表失敗');
-      console.error('獲取團隊成員列表失敗:', error);
+      console.error('獲取團隊成員失敗:', error);
+      message.error('獲取團隊成員失敗');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTeamMembers();
+    fetchMembers();
   }, []);
 
-  const handleOpenDialog = (member?: TeamMember) => {
-    setSelectedMember(member);
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setSelectedMember(undefined);
-    setOpenDialog(false);
-  };
-
-  const handleCreateMember = async (memberData: TeamMemberFormData) => {
-    setLoading(true);
+  const handleAddMember = async (values: TeamMemberFormData) => {
     try {
       const response = await fetch('/api/team', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...memberData,
-          status: 'active',
-        }),
+        body: JSON.stringify(values),
       });
       
       const result = await response.json();
       if (result.success) {
-        setTeamMembers(prev => [...prev, result.data]);
-        message.success('團隊成員添加成功');
-        handleCloseDialog();
+        message.success('添加團隊成員成功');
+        setModalVisible(false);
+        form.resetFields();
+        fetchMembers();
       } else {
-        message.error('添加團隊成員失敗');
+        message.error(result.error || '添加團隊成員失敗');
       }
     } catch (error) {
-      message.error('添加團隊成員失敗');
       console.error('添加團隊成員失敗:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateMember = async (memberData: TeamMemberFormData) => {
-    if (!selectedMember) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetch('/api/team', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: selectedMember.id,
-          ...memberData,
-        }),
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        setTeamMembers(prev => prev.map(m => m.id === selectedMember.id ? result.data : m));
-        message.success('團隊成員更新成功');
-        handleCloseDialog();
-      } else {
-        message.error('更新團隊成員失敗');
-      }
-    } catch (error) {
-      message.error('更新團隊成員失敗');
-      console.error('更新團隊成員失敗:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteMember = async (memberId: number) => {
-    confirm({
-      title: '確認刪除',
-      content: '確定要刪除這個團隊成員嗎？',
-      async onOk() {
-        setLoading(true);
-        try {
-          const response = await fetch(`/api/team?id=${memberId}`, {
-            method: 'DELETE',
-          });
-          
-          const result = await response.json();
-          if (result.success) {
-            setTeamMembers(prev => prev.filter(m => m.id !== memberId));
-            message.success('團隊成員刪除成功');
-          } else {
-            message.error('刪除團隊成員失敗');
-          }
-        } catch (error) {
-          message.error('刪除團隊成員失敗');
-          console.error('刪除團隊成員失敗:', error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'inactive':
-        return 'default';
-      case 'on_leave':
-        return 'warning';
-      default:
-        return 'default';
+      message.error('添加團隊成員失敗');
     }
   };
 
   const columns = [
     {
-      title: '成員姓名',
+      title: '姓名',
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '職位',
+      title: '角色',
       dataIndex: 'role',
       key: 'role',
-    },
-    {
-      title: '部門',
-      dataIndex: 'department',
-      key: 'department',
-    },
-    {
-      title: '狀態',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>
-          {status === 'active' ? '在職' : 
-           status === 'inactive' ? '離職' : 
-           status === 'on_leave' ? '請假中' : status}
-        </Tag>
+      render: (role: string) => (
+        <Tag color={role === '管理員' ? 'red' : 'blue'}>{role}</Tag>
       ),
     },
     {
-      title: '任務數',
+      title: '負責專案數',
+      dataIndex: 'projectCount',
+      key: 'projectCount',
+    },
+    {
+      title: '負責任務數',
       dataIndex: 'taskCount',
       key: 'taskCount',
     },
     {
-      title: '平均進度',
+      title: '平均完成進度',
       dataIndex: 'averageProgress',
       key: 'averageProgress',
-      render: (progress: number) => `${progress}%`,
+      render: (progress: number) => `${progress.toFixed(2)}%`,
     },
     {
-      title: '操作',
-      key: 'action',
-      render: (_: unknown, record: TeamMember) => (
-        <Space size="middle">
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
-            onClick={() => handleOpenDialog(record)}
-          />
-          <Button 
-            type="text" 
-            danger 
-            icon={<DeleteOutlined />} 
-            onClick={() => handleDeleteMember(record.id)}
-          />
-        </Space>
-      ),
+      title: '電子郵件',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: '加入時間',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => new Date(date).toLocaleString(),
     },
   ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem' }}>
-      <Card>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '1rem' 
-        }}>
-          <Title level={3} style={{ margin: 0 }}>
-            團隊管理
-          </Title>
+    <div>
+      <Card
+        title="團隊管理"
+        extra={
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => handleOpenDialog()}
+            onClick={() => setModalVisible(true)}
           >
-            新增成員
+            添加成員
           </Button>
-        </div>
-
+        }
+      >
         <Table
           columns={columns}
-          dataSource={teamMembers}
+          dataSource={members}
           rowKey="id"
           loading={loading}
         />
-
-        <TeamMemberForm
-          open={openDialog}
-          onClose={handleCloseDialog}
-          onSubmit={selectedMember ? handleUpdateMember : handleCreateMember}
-          initialData={selectedMember}
-        />
       </Card>
+
+      <Modal
+        title="添加團隊成員"
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAddMember}
+        >
+          <Form.Item
+            name="name"
+            label="姓名"
+            rules={[{ required: true, message: '請輸入姓名' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="role"
+            label="角色"
+            rules={[{ required: true, message: '請選擇角色' }]}
+          >
+            <Select>
+              <Select.Option value="管理員">管理員</Select.Option>
+              <Select.Option value="成員">成員</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="email"
+            label="電子郵件"
+            rules={[
+              { required: true, message: '請輸入電子郵件' },
+              { type: 'email', message: '請輸入有效的電子郵件地址' }
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              確定
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 } 

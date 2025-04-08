@@ -103,18 +103,33 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
     }
   }, [open, initialData, form]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values: any) => {
     try {
-      const values = await form.validateFields();
-      setLoading(true);
-      await onSubmit({
+      const taskData = {
         ...values,
         dueDate: values.dueDate.format('YYYY-MM-DD'),
+        progress: values.status === 'completed' ? 100 : values.progress || 0
+      };
+
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskData),
       });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('任務創建成功');
+        onClose();
+      } else {
+        message.error('創建任務失敗');
+      }
     } catch (error) {
-      message.error('請填寫所有必填欄位');
-    } finally {
-      setLoading(false);
+      console.error('創建任務錯誤:', error);
+      message.error('創建任務失敗');
     }
   };
 
@@ -122,13 +137,14 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
     <Modal
       title={initialData ? '編輯任務' : '新增任務'}
       open={open}
-      onOk={handleSubmit}
+      onOk={() => form.submit()}
       onCancel={onClose}
       confirmLoading={loading}
     >
       <Form
         form={form}
         layout="vertical"
+        onFinish={handleSubmit}
       >
         <Form.Item
           name="title"

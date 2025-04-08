@@ -6,6 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
+
 interface Project {
   id: number;
   name: string;
@@ -17,6 +18,15 @@ interface Project {
   updatedAt: string;
   taskCount?: number;
   averageProgress?: number;
+  managerId?: number;
+  managerName?: string;
+}
+
+interface TeamMember {
+  id: number;
+  name: string;
+  role: string;
+  email: string;
 }
 
 const { Option } = Select;
@@ -27,6 +37,23 @@ export default function ProjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  const fetchTeamMembers = async () => {
+    try {
+      const response = await fetch('/api/team');
+      const data = await response.json();
+      if (data.success) {
+        setTeamMembers(data.data);
+      } else {
+        message.error('獲取團隊成員列表失敗');
+      }
+    } catch (err) {
+      console.error('獲取團隊成員列表錯誤:', err);
+      message.error('獲取團隊成員列表失敗');
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -48,6 +75,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
+    fetchTeamMembers();
   }, []);
 
   const handleAdd = () => {
@@ -129,6 +157,14 @@ export default function ProjectsPage() {
           <span>{text}</span>
           <span style={{ color: '#666', fontSize: '12px' }}>{record.description}</span>
         </Space>
+      )
+    },
+    {
+      title: '負責人',
+      dataIndex: 'managerId',
+      key: 'managerId',
+      render: (text, record) => (
+        <span>{teamMembers.find(member => member.id === record.managerId)?.name || '未指定'}</span>
       )
     },
     {
@@ -267,6 +303,21 @@ export default function ProjectsPage() {
           >
             <Input />
           </Form.Item>
+          <Form.Item
+            name="managerId"
+            label="負責人"
+            rules={[{ required: true, message: '請選擇負責人' }]}
+          >
+            <Select>
+              {teamMembers.map((member) => (
+                <Option key={member.id} value={member.id}>
+                  {member.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+
           <Form.Item
             name="description"
             label="專案描述"

@@ -148,6 +148,9 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { id, title, description, projectId, assignedTo, status, priority, dueDate, progress } = body;
 
+    // 如果任務狀態為已完成，自動設置進度為 100
+    const finalProgress = status === 'completed' ? 100 : progress || 0;
+
     const sqlQuery = `
       UPDATE Tasks
       SET 
@@ -162,7 +165,20 @@ export async function PUT(request: Request) {
         updatedAt = GETDATE()
       WHERE id = @param8;
       
-      SELECT t.*, p.name as projectName, tm.name as assignedToName
+      SELECT 
+        t.id,
+        t.title,
+        t.description,
+        t.projectId,
+        t.assignedTo,
+        t.status,
+        t.priority,
+        t.dueDate,
+        t.progress,
+        t.createdAt,
+        t.updatedAt,
+        p.name as projectName,
+        tm.name as assignedToName
       FROM Tasks t
       LEFT JOIN Projects p ON t.projectId = p.id
       LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id
@@ -177,7 +193,7 @@ export async function PUT(request: Request) {
       status,
       priority,
       dueDate,
-      progress,
+      finalProgress,
       id
     ]);
 
@@ -193,7 +209,7 @@ export async function PUT(request: Request) {
       data: updatedTask[0]
     });
   } catch (error) {
-    console.error('更新任務失敗:', error);
+    console.error('更新錯誤:', error);
     return NextResponse.json({
       success: false,
       error: '更新任務失敗'

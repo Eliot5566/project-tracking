@@ -48,7 +48,7 @@ function GET(request) {
                     _a.trys.push([0, 2, , 3]);
                     searchParams = new URL(request.url).searchParams;
                     status = searchParams.get('status');
-                    sqlQuery = "\n      SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as totalTasks,\n        SUM(CASE WHEN t.status = '\u5DF2\u5B8C\u6210' THEN 1 ELSE 0 END) as completedTasks,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = '\u5DF2\u5B8C\u6210' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as progress\n      FROM Projects p\n      LEFT JOIN Tasks t ON p.id = t.projectId\n    ";
+                    sqlQuery = "\n      SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as totalTasks,\n        SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completedTasks,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as progress\n      FROM Projects p\n      LEFT JOIN Tasks t ON p.id = t.projectId\n    ";
                     params = [];
                     conditions = [];
                     if (status) {

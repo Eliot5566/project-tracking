@@ -8,6 +8,8 @@ interface Project {
   status: string;
   startDate: string;
   endDate: string;
+  managerId: number;
+  managerName: string;
   createdAt: string;
   updatedAt: string;
   taskCount?: number;
@@ -28,11 +30,17 @@ export async function GET(request: Request) {
         p.status,
         p.startDate,
         p.endDate,
+        p.managerId,
+        tm.name as managerName,
         p.createdAt,
         p.updatedAt,
         COUNT(t.id) as taskCount,
-        AVG(CAST(t.progress AS FLOAT)) as averageProgress
+        CASE 
+          WHEN COUNT(t.id) = 0 THEN 0
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+        END as averageProgress
       FROM Projects p
+      LEFT JOIN TeamMembers tm ON p.managerId = tm.id
       LEFT JOIN Tasks t ON p.id = t.projectId
     `;
 
@@ -48,7 +56,7 @@ export async function GET(request: Request) {
       sqlQuery += ' WHERE ' + conditions.join(' AND ');
     }
 
-    sqlQuery += ' GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.createdAt, p.updatedAt';
+    sqlQuery += ' GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt';
     sqlQuery += ' ORDER BY p.createdAt DESC';
 
     const projects = await query<Project[]>(sqlQuery, params);
@@ -70,15 +78,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, status, startDate, endDate } = body;
+    const { name, description, status, startDate, endDate, managerId } = body;
 
     const sqlQuery = `
       INSERT INTO Projects (
-        name, description, status, startDate, endDate,
+        name, description, status, startDate, endDate, managerId,
         createdAt, updatedAt
       )
       VALUES (
-        @param0, @param1, @param2, @param3, @param4,
+        @param0, @param1, @param2, @param3, @param4, @param5,
         GETDATE(), GETDATE()
       );
       
@@ -90,7 +98,8 @@ export async function POST(request: Request) {
       description,
       status,
       startDate,
-      endDate
+      endDate,
+      managerId
     ]);
 
     const newProject = await query<Project[]>(
@@ -101,14 +110,20 @@ export async function POST(request: Request) {
         p.status,
         p.startDate,
         p.endDate,
+        p.managerId,
+        tm.name as managerName,
         p.createdAt,
         p.updatedAt,
         COUNT(t.id) as taskCount,
-        AVG(CAST(t.progress AS FLOAT)) as averageProgress
+        CASE 
+          WHEN COUNT(t.id) = 0 THEN 0
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+        END as averageProgress
        FROM Projects p
+       LEFT JOIN TeamMembers tm ON p.managerId = tm.id
        LEFT JOIN Tasks t ON p.id = t.projectId
        WHERE p.id = @param0
-       GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.createdAt, p.updatedAt`,
+       GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt`,
       [result[0].id]
     );
 
@@ -129,7 +144,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, description, status, startDate, endDate } = body;
+    const { id, name, description, status, startDate, endDate, managerId } = body;
 
     const sqlQuery = `
       UPDATE Projects
@@ -139,8 +154,9 @@ export async function PUT(request: Request) {
         status = @param2,
         startDate = @param3,
         endDate = @param4,
+        managerId = @param5,
         updatedAt = GETDATE()
-      WHERE id = @param5;
+      WHERE id = @param6;
       
       SELECT 
         p.id,
@@ -149,14 +165,20 @@ export async function PUT(request: Request) {
         p.status,
         p.startDate,
         p.endDate,
+        p.managerId,
+        tm.name as managerName,
         p.createdAt,
         p.updatedAt,
         COUNT(t.id) as taskCount,
-        AVG(CAST(t.progress AS FLOAT)) as averageProgress
+        CASE 
+          WHEN COUNT(t.id) = 0 THEN 0
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+        END as averageProgress
       FROM Projects p
+      LEFT JOIN TeamMembers tm ON p.managerId = tm.id
       LEFT JOIN Tasks t ON p.id = t.projectId
-      WHERE p.id = @param5
-      GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.createdAt, p.updatedAt;
+      WHERE p.id = @param6
+      GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt;
     `;
 
     const updatedProject = await query<Project[]>(sqlQuery, [
@@ -165,6 +187,7 @@ export async function PUT(request: Request) {
       status,
       startDate,
       endDate,
+      managerId,
       id
     ]);
 
@@ -213,7 +236,10 @@ export async function DELETE(request: Request) {
         p.createdAt,
         p.updatedAt,
         COUNT(t.id) as taskCount,
-        AVG(CAST(t.progress AS FLOAT)) as averageProgress
+        CASE 
+          WHEN COUNT(t.id) = 0 THEN 0
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+        END as averageProgress
       FROM Projects p
       LEFT JOIN Tasks t ON p.id = t.projectId
       WHERE p.id = @param0

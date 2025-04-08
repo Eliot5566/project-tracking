@@ -31,10 +31,10 @@ export async function GET(request: Request) {
         p.createdAt,
         p.updatedAt,
         COUNT(t.id) as totalTasks,
-        SUM(CASE WHEN t.status = '已完成' THEN 1 ELSE 0 END) as completedTasks,
+        SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completedTasks,
         CASE 
           WHEN COUNT(t.id) = 0 THEN 0
-          ELSE CAST(SUM(CASE WHEN t.status = '已完成' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
         END as progress
       FROM Projects p
       LEFT JOIN Tasks t ON p.id = t.projectId
