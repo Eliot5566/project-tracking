@@ -6,6 +6,9 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
+// 移除直接導入伺服器端 API 路由
+// import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../api/calendar/route';
+
 const { RangePicker } = DatePicker;
 
 interface CalendarEvent {
@@ -30,121 +33,100 @@ interface EventFormValues {
   description: string;
 }
 
-const CalendarPage = () => {
-  const [loading, setLoading] = useState(true);
+export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-  const [form] = Form.useForm<EventFormValues>();
+  const [form] = Form.useForm();
 
-  const fetchEvents = async () => {
+  // 使用 fetch API 替換直接導入的函數
+  const fetchCalendarEvents = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const response = await fetch('/api/calendar');
       const result = await response.json();
       
       if (result.success) {
         setEvents(result.data);
       } else {
-        message.error('獲取行事曆事件失敗');
+        message.error('無法加載日曆事件');
       }
     } catch (error) {
-      console.error('獲取行事曆事件錯誤:', error);
-      message.error('獲取行事曆事件失敗');
+      console.error('獲取事件發生錯誤:', error);
+      message.error('無法加載日曆事件');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetchCalendarEvents();
   }, []);
 
-  const handleAddEvent = async (values: EventFormValues) => {
+  const handleSaveEvent = async (values: any) => {
     try {
-      const [startDate, endDate] = values.dateRange;
+      const { dateRange, ...eventData } = values;
+      const startDate = dateRange[0].format('YYYY-MM-DD');
+      const endDate = dateRange[1].format('YYYY-MM-DD');
       
-      const response = await fetch('/api/calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: values.title,
-          description: values.description,
-          type: values.type,
-          startDate: startDate.format('YYYY-MM-DD HH:mm:ss'),
-          endDate: endDate.format('YYYY-MM-DD HH:mm:ss'),
-        }),
-      });
+      const eventPayload = {
+        ...eventData,
+        startDate,
+        endDate
+      };
+
+      let response;
+      
+      if (editingEvent) {
+        // 更新事件
+        response = await fetch(`/api/calendar?id=${editingEvent.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(eventPayload)
+        });
+      } else {
+        // 創建事件
+        response = await fetch('/api/calendar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(eventPayload)
+        });
+      }
 
       const result = await response.json();
-
-      if (result.success) {
-        message.success('新增事件成功');
-        setIsModalVisible(false);
-        form.resetFields();
-        fetchEvents();
-      } else {
-        message.error('新增事件失敗');
-      }
-    } catch (error) {
-      console.error('新增事件錯誤:', error);
-      message.error('新增事件失敗');
-    }
-  };
-
-  const handleEditEvent = async (values: EventFormValues) => {
-    if (!editingEvent) return;
-
-    try {
-      const [startDate, endDate] = values.dateRange;
       
-      const response = await fetch('/api/calendar', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: editingEvent.id,
-          title: values.title,
-          description: values.description,
-          type: values.type,
-          startDate: startDate.format('YYYY-MM-DD HH:mm:ss'),
-          endDate: endDate.format('YYYY-MM-DD HH:mm:ss'),
-        }),
-      });
-
-      const result = await response.json();
-
       if (result.success) {
-        message.success('更新事件成功');
-        setIsModalVisible(false);
-        setEditingEvent(null);
+        message.success(editingEvent ? '事件更新成功' : '事件創建成功');
+        setModalVisible(false);
         form.resetFields();
-        fetchEvents();
+        fetchCalendarEvents();
       } else {
-        message.error('更新事件失敗');
+        message.error(result.error || '保存事件失敗');
       }
     } catch (error) {
-      console.error('更新事件錯誤:', error);
-      message.error('更新事件失敗');
+      console.error('保存事件錯誤:', error);
+      message.error('保存事件失敗');
     }
   };
 
   const handleDeleteEvent = async (id: number) => {
     try {
       const response = await fetch(`/api/calendar?id=${id}`, {
-        method: 'DELETE',
+        method: 'DELETE'
       });
-
+      
       const result = await response.json();
-
+      
       if (result.success) {
-        message.success('刪除事件成功');
-        fetchEvents();
+        message.success('事件刪除成功');
+        fetchCalendarEvents();
       } else {
-        message.error('刪除事件失敗');
+        message.error(result.error || '刪除事件失敗');
       }
     } catch (error) {
       console.error('刪除事件錯誤:', error);
@@ -152,109 +134,53 @@ const CalendarPage = () => {
     }
   };
 
-  const getEventTypeColor = (type: string) => {
-    switch (type) {
-      case '會議':
-        return 'blue';
-      case '任務':
-        return 'green';
-      case '提醒':
-        return 'orange';
-      case '其他':
-        return 'gray';
-      default:
-        return 'default';
-    }
-  };
-
-  const showEditModal = (event: CalendarEvent) => {
-    setEditingEvent(event);
-    form.setFieldsValue({
-      title: event.title,
-      type: event.type,
-      dateRange: [
-        dayjs(event.startDate),
-        dayjs(event.endDate)
-      ],
-      description: event.description
-    });
-    setIsModalVisible(true);
-  };
-
   const columns: ColumnsType<CalendarEvent> = [
     {
-      title: '事件標題',
+      title: '標題',
       dataIndex: 'title',
       key: 'title',
-      width: 200,
-    },
-    {
-      title: '類型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: string) => (
-        <Tag color={getEventTypeColor(type)}>{type}</Tag>
-      ),
-    },
-    {
-      title: '開始時間',
-      dataIndex: 'startDate',
-      key: 'startDate',
-      width: 180,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
-    },
-    {
-      title: '結束時間',
-      dataIndex: 'endDate',
-      key: 'endDate',
-      width: 180,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
-    },
-    {
-      title: '關聯專案',
-      dataIndex: 'projectName',
-      key: 'projectName',
-      width: 150,
-    },
-    {
-      title: '關聯任務',
-      dataIndex: 'taskName',
-      key: 'taskName',
-      width: 150,
     },
     {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
-      ellipsis: true,
+    },
+    {
+      title: '開始日期',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      render: (date) => dayjs(date).format('YYYY-MM-DD'),
+    },
+    {
+      title: '結束日期',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      render: (date) => dayjs(date).format('YYYY-MM-DD'),
+    },
+    {
+      title: '類型',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type) => <Tag color={type === 'project' ? 'blue' : 'green'}>{type}</Tag>,
     },
     {
       title: '操作',
       key: 'action',
-      width: 120,
       render: (_, record) => (
-        <div className="flex gap-2">
+        <div>
           <Button
-            type="link"
             icon={<EditOutlined />}
-            onClick={() => showEditModal(record)}
-          >
-            編輯
-          </Button>
+            onClick={() => {
+              setEditingEvent(record);
+              form.setFieldsValue(record);
+              setModalVisible(true);
+            }}
+          />
           <Popconfirm
-            title="確定要刪除這個事件嗎？"
+            title="確定刪除此事件嗎？"
             onConfirm={() => handleDeleteEvent(record.id)}
-            okText="確定"
-            cancelText="取消"
           >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-            >
-              刪除
-            </Button>
+            <Button icon={<DeleteOutlined />} danger />
           </Popconfirm>
         </div>
       ),
@@ -262,10 +188,9 @@ const CalendarPage = () => {
   ];
 
   return (
-    <div className="p-6">
-      <Card 
-        title="行事曆" 
-        className="mb-6"
+    <div style={{ padding: '24px' }}>
+      <Card
+        title="日曆事件管理"
         extra={
           <Button
             type="primary"
@@ -273,10 +198,10 @@ const CalendarPage = () => {
             onClick={() => {
               setEditingEvent(null);
               form.resetFields();
-              setIsModalVisible(true);
+              setModalVisible(true);
             }}
           >
-            新增事件
+            添加事件
           </Button>
         }
       >
@@ -285,69 +210,57 @@ const CalendarPage = () => {
           dataSource={events}
           rowKey="id"
           loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 個事件`,
-          }}
-          scroll={{ x: 1000 }}
         />
       </Card>
 
       <Modal
-        title={editingEvent ? '編輯事件' : '新增事件'}
-        open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          setEditingEvent(null);
-          form.resetFields();
-        }}
-        onOk={() => form.submit()}
+        title={editingEvent ? '編輯事件' : '添加事件'}
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
       >
         <Form
           form={form}
           layout="vertical"
-          onFinish={editingEvent ? handleEditEvent : handleAddEvent}
+          onFinish={handleSaveEvent}
         >
           <Form.Item
             name="title"
-            label="事件標題"
-            rules={[{ required: true, message: '請輸入事件標題' }]}
+            label="標題"
+            rules={[{ required: true, message: '請輸入標題' }]}
           >
-            <Input />
+            <Input placeholder="輸入事件標題" />
           </Form.Item>
-
-          <Form.Item
-            name="type"
-            label="事件類型"
-            rules={[{ required: true, message: '請選擇事件類型' }]}
-          >
-            <Select>
-              <Select.Option value="會議">會議</Select.Option>
-              <Select.Option value="任務">任務</Select.Option>
-              <Select.Option value="提醒">提醒</Select.Option>
-              <Select.Option value="其他">其他</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="dateRange"
-            label="時間範圍"
-            rules={[{ required: true, message: '請選擇時間範圍' }]}
-          >
-            <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" />
-          </Form.Item>
-
           <Form.Item
             name="description"
-            label="事件描述"
+            label="描述"
           >
-            <Input.TextArea rows={4} />
+            <Input.TextArea placeholder="輸入事件描述" />
+          </Form.Item>
+          <Form.Item
+            name="dateRange"
+            label="日期範圍"
+            rules={[{ required: true, message: '請選擇日期範圍' }]}
+          >
+            <RangePicker />
+          </Form.Item>
+          <Form.Item
+            name="type"
+            label="類型"
+            rules={[{ required: true, message: '請選擇類型' }]}
+          >
+            <Select placeholder="選擇事件類型">
+              <Select.Option value="project">專案</Select.Option>
+              <Select.Option value="task">任務</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              保存
+            </Button>
           </Form.Item>
         </Form>
       </Modal>
     </div>
   );
-};
-
-export default CalendarPage; 
+}

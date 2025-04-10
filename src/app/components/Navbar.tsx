@@ -1,6 +1,6 @@
 'use client';
 
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Button } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   DashboardOutlined,
@@ -8,12 +8,18 @@ import {
   ProjectOutlined,
   CalendarOutlined,
   BellOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  BulbOutlined
 } from '@ant-design/icons';
 
 const { Header } = Layout;
 
-export default function Navbar() {
+interface NavbarProps {
+  darkMode: boolean;
+  setDarkMode: (value: boolean) => void;
+}
+
+export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -43,11 +49,11 @@ export default function Navbar() {
       icon: <CalendarOutlined />,
       label: '行事曆'
     },
-    {
-      key: '/notifications',
-      icon: <BellOutlined />,
-      label: '通知'
-    },
+    // {
+    //   key: '/notifications',
+    //   icon: <BellOutlined />,
+    //   label: '通知'
+    // },
     {
       key: '/progress',
       icon: <BarChartOutlined />,
@@ -56,9 +62,9 @@ export default function Navbar() {
   ];
 
   return (
-    <Header style={{ padding: 0, background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+    <Header style={{ padding: 0, background: darkMode ? '#1f1f1f' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 24px' }}>
-        <div style={{ marginRight: '24px', fontSize: '18px', fontWeight: 'bold' }}>
+        <div style={{ marginRight: '24px', fontSize: '18px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
           專案追蹤系統
         </div>
         <Menu
@@ -66,9 +72,21 @@ export default function Navbar() {
           selectedKeys={[pathname]}
           items={menuItems}
           onClick={({ key }) => router.push(key)}
-          style={{ flex: 1 }}
+          style={{ flex: 1, color: darkMode ? '#ffffff' : '#000000' }}
         />
+        <Button
+          icon={<BulbOutlined />}
+          onClick={() => setDarkMode(!darkMode)}
+          style={{
+            backgroundColor: darkMode ? '#ffffff' : '#000000',
+            color: darkMode ? '#000000' : '#ffffff',
+            border: 'none',
+            marginLeft: 'auto'
+          }}
+        >
+          {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
+        </Button>
       </div>
     </Header>
   );
-} 
+}

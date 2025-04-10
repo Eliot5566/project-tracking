@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Button, Modal, Form, Input, Select, message } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Tooltip } from 'antd';
+import { PlusOutlined, BulbOutlined } from '@ant-design/icons';
+import { ConfigProvider, theme } from 'antd';
 
 interface TeamMember {
   id: number;
@@ -26,6 +27,7 @@ export default function TeamPage() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const [form] = Form.useForm();
 
   const fetchMembers = async () => {
@@ -87,7 +89,9 @@ export default function TeamPage() {
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => (
-        <Tag color={role === '管理員' ? 'red' : 'blue'}>{role}</Tag>
+        <Tooltip title={role === '管理員' ? '擁有管理權限' : '普通成員'}>
+          <Tag color={role === '管理員' ? 'red' : 'blue'}>{role}</Tag>
+        </Tooltip>
       ),
     },
     {
@@ -104,7 +108,11 @@ export default function TeamPage() {
       title: '平均完成進度',
       dataIndex: 'averageProgress',
       key: 'averageProgress',
-      render: (progress: number) => `${progress.toFixed(2)}%`,
+      render: (progress: number) => (
+        <Tooltip title={`平均完成進度為 ${progress.toFixed(2)}%`}>
+          {progress.toFixed(2)}%
+        </Tooltip>
+      ),
     },
     {
       title: '電子郵件',
@@ -120,72 +128,95 @@ export default function TeamPage() {
   ];
 
   return (
-    <div>
-      <Card
-        title="團隊管理"
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setModalVisible(true)}
-          >
-            添加成員
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={members}
-          rowKey="id"
-          loading={loading}
-        />
-      </Card>
-
-      <Modal
-        title="添加團隊成員"
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={null}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleAddMember}
-        >
-          <Form.Item
-            name="name"
-            label="姓名"
-            rules={[{ required: true, message: '請輸入姓名' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="role"
-            label="角色"
-            rules={[{ required: true, message: '請選擇角色' }]}
-          >
-            <Select>
-              <Select.Option value="管理員">管理員</Select.Option>
-              <Select.Option value="成員">成員</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="email"
-            label="電子郵件"
-            rules={[
-              { required: true, message: '請輸入電子郵件' },
-              { type: 'email', message: '請輸入有效的電子郵件地址' }
-            ]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              確定
+    <ConfigProvider
+      theme={{
+        algorithm: darkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      }}
+    >
+      <div style={{ padding: '24px' }}>
+        <Card
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>團隊管理</span>
+              <Button
+                icon={<BulbOutlined />}
+                onClick={() => setDarkMode(!darkMode)}
+              >
+                {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
+              </Button>
+            </div>
+          }
+          extra={
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setModalVisible(true)}
+            >
+              添加成員
             </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+          }
+          style={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
+        >
+          <Table
+            columns={columns}
+            dataSource={members}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 位成員`,
+            }}
+            style={{ borderRadius: '8px', overflow: 'hidden' }}
+          />
+        </Card>
+
+        <Modal
+          title="添加團隊成員"
+          open={modalVisible}
+          onCancel={() => setModalVisible(false)}
+          footer={null}
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleAddMember}
+          >
+            <Form.Item
+              name="name"
+              label="姓名"
+              rules={[{ required: true, message: '請輸入姓名' }]}
+            >
+              <Input placeholder="輸入成員姓名" />
+            </Form.Item>
+            <Form.Item
+              name="role"
+              label="角色"
+              rules={[{ required: true, message: '請選擇角色' }]}
+            >
+              <Select placeholder="選擇角色">
+                <Select.Option value="管理員">管理員</Select.Option>
+                <Select.Option value="成員">成員</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="email"
+              label="電子郵件"
+              rules={[
+                { required: true, message: '請輸入電子郵件' },
+                { type: 'email', message: '請輸入有效的電子郵件地址' },
+              ]}
+            >
+              <Input placeholder="輸入電子郵件" />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block>
+                確定
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    </ConfigProvider>
   );
-} 
+}

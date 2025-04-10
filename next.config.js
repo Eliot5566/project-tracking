@@ -6,11 +6,29 @@ const nextConfig = {
     serverActions: true,
   },
   webpack: (config, { isServer }) => {
+    // 伺服器端可以使用 Node.js 的模組
     if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push('mssql');
+      return config;
     }
-    return config;
+
+    // 客戶端環境不應該包含這些 Node.js 模組
+    return {
+      ...config,
+      resolve: {
+        ...config.resolve,
+        fallback: {
+          ...config.resolve.fallback,
+          // 將這些 Node.js 模組替換為空模組或假模組
+          net: false,
+          tls: false,
+          fs: false,
+          dns: false,
+          child_process: false,
+          mssql: false,
+          tedious: false
+        },
+      },
+    };
   }
 };
 

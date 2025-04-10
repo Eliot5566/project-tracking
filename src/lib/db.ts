@@ -1,3 +1,7 @@
+if (typeof window !== 'undefined') {
+  throw new Error('`db.ts` should only be used on the server side.');
+}
+
 import sql from 'mssql';
 
 const config = {
@@ -66,4 +70,4 @@ export async function execute<T>(sqlQuery: string, params: Record<string, string
     console.error('執行錯誤:', error);
     throw error;
   }
-} 
+}

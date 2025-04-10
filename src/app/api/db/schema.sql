@@ -71,11 +71,29 @@ CREATE TABLE CalendarEvents (
     taskId INT,
     createdAt DATETIME DEFAULT GETDATE(),
     updatedAt DATETIME DEFAULT GETDATE()
-
 );
+
+-- 創建任務依賴關係表
+CREATE TABLE TaskDependencies (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    taskId INT NOT NULL,
+    dependsOnTaskId INT NOT NULL,
+    type NVARCHAR(20) NOT NULL, -- 'start-to-start', 'start-to-finish', 'finish-to-start', 'finish-to-finish'
+    createdAt DATETIME DEFAULT GETDATE(),
+    updatedAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (taskId) REFERENCES Tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (dependsOnTaskId) REFERENCES Tasks(id) ON DELETE NO ACTION,
+    CONSTRAINT UC_TaskDependency UNIQUE (taskId, dependsOnTaskId)
+);
+
+-- 更新通知表結構以支持用戶關聯
+ALTER TABLE Notifications
+ADD userId INT NULL;
 
 -- 創建索引
 CREATE INDEX IX_Tasks_ProjectId ON Tasks(projectId);
 CREATE INDEX IX_Tasks_AssignedTo ON Tasks(assignedTo);
 CREATE INDEX IX_Events_StartDate ON Events(startDate);
-CREATE INDEX IX_Notifications_CreatedAt ON Notifications(createdAt); 
+CREATE INDEX IX_Notifications_CreatedAt ON Notifications(createdAt);
+CREATE INDEX IX_TaskDependencies_TaskId ON TaskDependencies(taskId);
+CREATE INDEX IX_TaskDependencies_DependsOnTaskId ON TaskDependencies(dependsOnTaskId);

@@ -8,15 +8,18 @@ import {
   Typography, 
   Card,
   message,
-  Modal
+  Modal,
+  Tooltip
 } from 'antd';
 import { 
   PlusOutlined, 
   EditOutlined, 
-  DeleteOutlined 
+  DeleteOutlined,
+  NodeIndexOutlined
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import TaskForm from '../components/TaskForm';
+import TaskDependencyModal from '../components/TaskDependencyModal';
 
 const { Title } = Typography;
 const { confirm } = Modal;
@@ -52,6 +55,7 @@ export default function TaskPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
   const [loading, setLoading] = useState(false);
+  const [dependencyModalVisible, setDependencyModalVisible] = useState(false);
 
   // 獲取任務列表
   const fetchTasks = async () => {
@@ -203,6 +207,12 @@ export default function TaskPage() {
     }
   };
 
+  // 處理打開依賴關係管理
+  const handleDependencyManage = (task: Task) => {
+    setSelectedTask(task);
+    setDependencyModalVisible(true);
+  };
+
   const columns = [
     {
       title: '任務名稱',
@@ -266,6 +276,11 @@ export default function TaskPage() {
           />
           <Button 
             type="text" 
+            icon={<NodeIndexOutlined />} 
+            onClick={() => handleDependencyManage(record)}
+          />
+          <Button 
+            type="text" 
             danger 
             icon={<DeleteOutlined />} 
             onClick={() => handleDeleteTask(record.id)}
@@ -308,6 +323,12 @@ export default function TaskPage() {
           onClose={handleCloseDialog}
           onSubmit={selectedTask ? handleUpdateTask : handleCreateTask}
           initialData={selectedTask}
+        />
+
+        <TaskDependencyModal
+          visible={dependencyModalVisible}
+          task={selectedTask}
+          onClose={() => setDependencyModalVisible(false)}
         />
       </Card>
     </div>

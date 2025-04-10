@@ -1,3 +1,7 @@
+if (typeof window !== 'undefined') {
+  throw new Error('`calendar/route.ts` should only be used on the server side.');
+}
+
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
@@ -283,4 +287,4 @@ export async function DELETE(request: Request) {
       error: '刪除行事曆事件失敗'
     }, { status: 500 });
   }
-} 
+}
