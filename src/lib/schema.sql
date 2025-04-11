@@ -83,6 +83,53 @@ CREATE TABLE ProgressTracking (
     FOREIGN KEY (taskId) REFERENCES Tasks(id)
 );
 
+CREATE TABLE Documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fileName TEXT NOT NULL,
+    originalName TEXT NOT NULL,
+    fileType TEXT NOT NULL,
+    fileSize INTEGER NOT NULL,
+    filePath TEXT NOT NULL,
+    description TEXT,
+    uploadedBy TEXT NOT NULL,
+    projectId INTEGER,
+    taskId INTEGER,
+    isLatestVersion BOOLEAN NOT NULL DEFAULT 1,
+    parentDocumentId INTEGER,
+    versionNumber INTEGER NOT NULL DEFAULT 1,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    FOREIGN KEY (projectId) REFERENCES Projects(id),
+    FOREIGN KEY (taskId) REFERENCES Tasks(id),
+    FOREIGN KEY (parentDocumentId) REFERENCES Documents(id)
+);
+
+CREATE TABLE DocumentTags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    createdAt TEXT NOT NULL
+);
+
+CREATE TABLE DocumentTagAssociations (
+    documentId INTEGER NOT NULL,
+    tagId INTEGER NOT NULL,
+    createdAt TEXT NOT NULL,
+    PRIMARY KEY (documentId, tagId),
+    FOREIGN KEY (documentId) REFERENCES Documents(id),
+    FOREIGN KEY (tagId) REFERENCES DocumentTags(id)
+);
+
+CREATE TABLE DocumentComments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    documentId INTEGER NOT NULL,
+    commentedBy TEXT NOT NULL,
+    content TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES Documents(id)
+);
+
 -- 建立索引
 CREATE INDEX IX_Tasks_ProjectId ON Tasks(projectId);
 CREATE INDEX IX_Tasks_AssignedTo ON Tasks(assignedTo);
@@ -90,4 +137,4 @@ CREATE INDEX IX_CalendarEvents_ProjectId ON CalendarEvents(projectId);
 CREATE INDEX IX_CalendarEvents_TaskId ON CalendarEvents(taskId);
 CREATE INDEX IX_Notifications_ProjectId ON Notifications(projectId);
 CREATE INDEX IX_Notifications_TaskId ON Notifications(taskId);
-CREATE INDEX IX_Notifications_IsRead ON Notifications(isRead); 
+CREATE INDEX IX_Notifications_IsRead ON Notifications(isRead);

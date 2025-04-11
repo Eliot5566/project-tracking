@@ -28,6 +28,13 @@ export async function getConnection() {
 
 export async function query<T>(sqlQuery: string, params: (string | number | null)[] = []) {
   try {
+    // 將 SQL 中的 ? 佔位符替換為 @param0, @param1 等
+    let paramIndex = 0;
+    const modifiedSqlQuery = sqlQuery.replace(/\?/g, () => `@param${paramIndex++}`);
+    
+    console.log('Executing SQL Query:', modifiedSqlQuery);
+    console.log('With Parameters:', params);
+
     const pool = await getConnection();
     const request = pool.request();
 
