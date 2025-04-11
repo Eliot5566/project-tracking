@@ -33,6 +33,9 @@ yarn-error.log*
 # 上傳文件
 /public
 
+# 錯誤紀錄
+*.log
+
 # env files (can opt-in for committing if needed)
 .env*
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import logger from '@/lib/logger';
+import { z } from 'zod';
 
 interface TeamMember {
   id: number;
@@ -14,6 +15,14 @@ interface TeamMember {
   createdAt: string;
   updatedAt: string;
 }
+
+const teamMemberSchema = z.object({
+  name: z.string().min(1, '姓名為必填項'),
+  role: z.string().min(1, '角色為必填項'),
+  email: z.string().email('請輸入有效的電子郵件地址'),
+  status: z.enum(['active', 'inactive'], '狀態必須是活躍或非活躍'),
+  department: z.string().min(1, '部門為必填項'),
+});
 
 // 獲取所有團隊成員
 export async function GET() {
@@ -50,23 +59,24 @@ export async function GET() {
 // 創建新團隊成員
 export async function POST(request: NextRequest) {
   try {
-    const { name, role, email, status, department } = await request.json();
-    
-    if (!name || !role || !email || !status || !department) {
-      return NextResponse.json({ success: false, error: '缺少必要參數' }, { status: 400 });
-    }
+    const body = await request.json();
+    const validatedData = teamMemberSchema.parse(body);
+
+    const { name, role, email, status, department } = validatedData;
 
     const sqlQuery = `
       INSERT INTO TeamMembers (name, role, email, status, department, createdAt, updatedAt)
       VALUES (@param0, @param1, @param2, @param3, @param4, GETDATE(), GETDATE());
-      
+
       SELECT SCOPE_IDENTITY() as id;
     `;
-    
+
     await query(sqlQuery, [name, role, email, status, department]);
     return NextResponse.json({ success: true, message: '添加團隊成員成功' });
   } catch (error) {
-    console.error('添加團隊成員失敗:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: error.errors.map(e => e.message).join(', ') }, { status: 400 });
+    }
     logger.error(`添加團隊成員失敗: ${error.message}`);
     return NextResponse.json({ success: false, error: '添加團隊成員失敗' }, { status: 500 });
   }
