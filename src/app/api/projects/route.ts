@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-import logger from '@/lib/logger';
-
 interface Project {
   id: number;
   name: string;
@@ -40,7 +38,7 @@ export async function GET(request: Request) {
         CASE 
           WHEN COUNT(t.id) = 0 THEN 0
           ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
-        END as averageProgress
+        END as progress
       FROM Projects p
       LEFT JOIN TeamMembers tm ON p.managerId = tm.id
       LEFT JOIN Tasks t ON p.id = t.projectId
@@ -120,7 +118,7 @@ export async function POST(request: Request) {
         CASE 
           WHEN COUNT(t.id) = 0 THEN 0
           ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
-        END as averageProgress
+        END as progress
        FROM Projects p
        LEFT JOIN TeamMembers tm ON p.managerId = tm.id
        LEFT JOIN Tasks t ON p.id = t.projectId
@@ -135,7 +133,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('創建錯誤:', error);
-    logger.error(`創建錯誤: ${error.message}`);
     return NextResponse.json({
       success: false,
       error: '創建專案失敗'
@@ -176,7 +173,7 @@ export async function PUT(request: Request) {
         CASE 
           WHEN COUNT(t.id) = 0 THEN 0
           ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
-        END as averageProgress
+        END as progress
       FROM Projects p
       LEFT JOIN TeamMembers tm ON p.managerId = tm.id
       LEFT JOIN Tasks t ON p.id = t.projectId
@@ -207,7 +204,6 @@ export async function PUT(request: Request) {
     });
   } catch (error) {
     console.error('更新錯誤:', error);
-    logger.error(`更新錯誤: ${error.message}`);
     return NextResponse.json({
       success: false,
       error: '更新專案失敗'
@@ -243,7 +239,7 @@ export async function DELETE(request: Request) {
         CASE 
           WHEN COUNT(t.id) = 0 THEN 0
           ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
-        END as averageProgress
+        END as progress
       FROM Projects p
       LEFT JOIN Tasks t ON p.id = t.projectId
       WHERE p.id = @param0
@@ -275,4 +271,4 @@ export async function DELETE(request: Request) {
       error: '刪除專案失敗'
     }, { status: 500 });
   }
-} 
+}
