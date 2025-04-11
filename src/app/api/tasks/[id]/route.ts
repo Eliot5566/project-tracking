@@ -3,11 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import sql from 'mssql';
 
-import { getConnectionPool } from '@/app/lib/db';
 
-if (typeof window !== 'undefined') {
-  throw new Error('`tasks/[id]/route.ts` should only be used on the server side.');
-}
+import { getConnectionPool } from '@/app/lib/db';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -22,8 +19,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
     return NextResponse.json({ task: result.recordset[0] }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching task:', error);
-    return NextResponse.json({ error: '無法獲取任務' }, { status: 500 });
+    console.error('取得單一任務失敗:', error);
+    return NextResponse.json({ error: '取得單一任務失敗' }, { status: 500 });
   }
 }
 

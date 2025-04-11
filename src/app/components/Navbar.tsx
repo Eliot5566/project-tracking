@@ -1,6 +1,6 @@
 'use client';
 
-import { Layout, Menu, Button } from 'antd';
+import { Layout, Menu } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   DashboardOutlined,
@@ -8,18 +8,12 @@ import {
   ProjectOutlined,
   CalendarOutlined,
   BellOutlined,
-  BarChartOutlined,
-  BulbOutlined
+  BarChartOutlined
 } from '@ant-design/icons';
 
 const { Header } = Layout;
 
-interface NavbarProps {
-  darkMode: boolean;
-  setDarkMode: (value: boolean) => void;
-}
-
-export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
+export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -27,7 +21,7 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: '儀表板'
+      label: '首頁'
     },
     {
       key: '/projects',
@@ -49,22 +43,27 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       icon: <CalendarOutlined />,
       label: '行事曆'
     },
-    // {
-    //   key: '/notifications',
-    //   icon: <BellOutlined />,
-    //   label: '通知'
-    // },
+    {
+      key: '/notifications',
+      icon: <BellOutlined />,
+      label: '通知'
+    },
     {
       key: '/progress',
       icon: <BarChartOutlined />,
       label: '進度追蹤'
+    },
+    {
+      key: '/dashboard',
+      icon: <BarChartOutlined />,
+      label: '儀表板'
     }
   ];
 
   return (
-    <Header style={{ padding: 0, background: darkMode ? '#1f1f1f' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
+    <Header style={{ padding: 0, background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 24px' }}>
-        <div style={{ marginRight: '24px', fontSize: '18px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
+        <div style={{ marginRight: '24px', fontSize: '18px', fontWeight: 'bold' }}>
           專案追蹤系統
         </div>
         <Menu
@@ -72,21 +71,9 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
           selectedKeys={[pathname]}
           items={menuItems}
           onClick={({ key }) => router.push(key)}
-          style={{ flex: 1, color: darkMode ? '#ffffff' : '#000000' }}
+          style={{ flex: 1 }}
         />
-        <Button
-          icon={<BulbOutlined />}
-          onClick={() => setDarkMode(!darkMode)}
-          style={{
-            backgroundColor: darkMode ? '#ffffff' : '#000000',
-            color: darkMode ? '#000000' : '#ffffff',
-            border: 'none',
-            marginLeft: 'auto'
-          }}
-        >
-          {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
-        </Button>
       </div>
     </Header>
   );
-}
+} 

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+import logger from '@/lib/logger';
+
 interface Project {
   id: number;
   name: string;
@@ -133,6 +135,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('創建錯誤:', error);
+    logger.error(`創建錯誤: ${error.message}`);
     return NextResponse.json({
       success: false,
       error: '創建專案失敗'
@@ -204,6 +207,7 @@ export async function PUT(request: Request) {
     });
   } catch (error) {
     console.error('更新錯誤:', error);
+    logger.error(`更新錯誤: ${error.message}`);
     return NextResponse.json({
       success: false,
       error: '更新專案失敗'

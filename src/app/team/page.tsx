@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Tooltip } from 'antd';
-import { PlusOutlined, BulbOutlined } from '@ant-design/icons';
-import { ConfigProvider, theme } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
 interface TeamMember {
   id: number;
@@ -15,19 +14,22 @@ interface TeamMember {
   averageProgress: number;
   createdAt: string;
   updatedAt: string;
+  department: string;
+  status: string;
 }
 
 interface TeamMemberFormData {
   name: string;
   role: string;
   email: string;
+  department: string;
+  status: string;
 }
 
 export default function TeamPage() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [form] = Form.useForm();
 
   const fetchMembers = async () => {
@@ -53,28 +55,30 @@ export default function TeamPage() {
     fetchMembers();
   }, []);
 
-  const handleAddMember = async (values: TeamMemberFormData) => {
+  const handleAddMember = async () => {
     try {
+      const values = await form.validateFields();
+      if (!values.department || !values.status) {
+        message.error('請填寫所有必要欄位，包括部門和狀態');
+        return;
+      }
       const response = await fetch('/api/team', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       });
-      
       const result = await response.json();
+
       if (result.success) {
-        message.success('添加團隊成員成功');
+        message.success('新增團隊成員成功');
         setModalVisible(false);
-        form.resetFields();
         fetchMembers();
       } else {
-        message.error(result.error || '添加團隊成員失敗');
+        message.error(result.error || '新增團隊成員失敗');
       }
     } catch (error) {
-      console.error('添加團隊成員失敗:', error);
-      message.error('添加團隊成員失敗');
+      console.error('新增團隊成員失敗:', error);
+      message.error('新增團隊成員失敗');
     }
   };
 
@@ -92,6 +96,21 @@ export default function TeamPage() {
         <Tooltip title={role === '管理員' ? '擁有管理權限' : '普通成員'}>
           <Tag color={role === '管理員' ? 'red' : 'blue'}>{role}</Tag>
         </Tooltip>
+      ),
+    },
+    {
+      title: '部門',
+      dataIndex: 'department',
+      key: 'department',
+    },
+    {
+      title: '狀態',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <Tag color={status === 'active' ? 'green' : 'red'}>
+          {status === 'active' ? '活躍' : '非活躍'}
+        </Tag>
       ),
     },
     {
@@ -128,95 +147,56 @@ export default function TeamPage() {
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: darkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-      }}
-    >
-      <div style={{ padding: '24px' }}>
-        <Card
-          title={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>團隊管理</span>
-              <Button
-                icon={<BulbOutlined />}
-                onClick={() => setDarkMode(!darkMode)}
-              >
-                {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
-              </Button>
-            </div>
-          }
-          extra={
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setModalVisible(true)}
-            >
-              添加成員
-            </Button>
-          }
-          style={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
-        >
-          <Table
-            columns={columns}
-            dataSource={members}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total) => `共 ${total} 位成員`,
-            }}
-            style={{ borderRadius: '8px', overflow: 'hidden' }}
-          />
-        </Card>
-
-        <Modal
-          title="添加團隊成員"
-          open={modalVisible}
-          onCancel={() => setModalVisible(false)}
-          footer={null}
-        >
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleAddMember}
+    <div style={{ padding: '24px' }}>
+      <Card
+        title="團隊管理"
+        extra={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setModalVisible(true)}
           >
-            <Form.Item
-              name="name"
-              label="姓名"
-              rules={[{ required: true, message: '請輸入姓名' }]}
-            >
-              <Input placeholder="輸入成員姓名" />
-            </Form.Item>
-            <Form.Item
-              name="role"
-              label="角色"
-              rules={[{ required: true, message: '請選擇角色' }]}
-            >
-              <Select placeholder="選擇角色">
-                <Select.Option value="管理員">管理員</Select.Option>
-                <Select.Option value="成員">成員</Select.Option>
-              </Select>
-            </Form.Item>
-            <Form.Item
-              name="email"
-              label="電子郵件"
-              rules={[
-                { required: true, message: '請輸入電子郵件' },
-                { type: 'email', message: '請輸入有效的電子郵件地址' },
-              ]}
-            >
-              <Input placeholder="輸入電子郵件" />
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit" block>
-                確定
-              </Button>
-            </Form.Item>
-          </Form>
-        </Modal>
-      </div>
-    </ConfigProvider>
+            添加成員
+          </Button>
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={members}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 位成員`,
+          }}
+        />
+      </Card>
+
+      <Modal
+        title="新增團隊成員"
+        visible={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        onOk={handleAddMember}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="姓名" rules={[{ required: true, message: '請輸入姓名' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="email" label="電子郵件" rules={[{ required: true, message: '請輸入電子郵件' }, { type: 'email', message: '請輸入有效的電子郵件地址' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="role" label="職位" rules={[{ required: true, message: '請選擇職位' }]}>
+            <Select options={[{ value: 'manager', label: '經理' }, { value: 'developer', label: '開發人員' }, { value: 'designer', label: '設計師' }]} />
+          </Form.Item>
+          <Form.Item name="department" label="部門" rules={[{ required: true, message: '請選擇部門' }]}>
+            <Select options={[{ value: 'management', label: '管理部' }, { value: 'development', label: '技術部' }, { value: 'design', label: '設計部' }]} />
+          </Form.Item>
+          <Form.Item name="status" label="狀態" rules={[{ required: true, message: '請選擇狀態' }]}>
+            <Select options={[{ value: 'active', label: '活躍' }, { value: 'inactive', label: '非活躍' }]} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 }

@@ -3,10 +3,6 @@ import { connect } from '@/lib/db';
 import { jwtSign } from '@/lib/jwt';
 import sql from 'mssql';
 
-if (typeof window !== 'undefined') {
-  throw new Error('`auth/login/route.ts` should only be used on the server side.');
-}
-
 export async function POST(request: Request) {
   try {
     const { employeeId, password } = await request.json();
@@ -99,4 +95,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+} 

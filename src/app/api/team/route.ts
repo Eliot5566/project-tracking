@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import logger from '@/lib/logger';
 
 interface TeamMember {
   id: number;
@@ -41,6 +42,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error('獲取團隊成員失敗:', error);
+    logger.error(`獲取團隊成員失敗: ${error.message}`);
     return NextResponse.json({ success: false, error: '獲取團隊成員失敗' }, { status: 500 });
   }
 }
@@ -48,23 +50,24 @@ export async function GET() {
 // 創建新團隊成員
 export async function POST(request: NextRequest) {
   try {
-    const { name, role, email } = await request.json();
+    const { name, role, email, status, department } = await request.json();
     
-    if (!name || !role || !email) {
+    if (!name || !role || !email || !status || !department) {
       return NextResponse.json({ success: false, error: '缺少必要參數' }, { status: 400 });
     }
 
     const sqlQuery = `
-      INSERT INTO TeamMembers (name, role, email, createdAt, updatedAt)
-      VALUES (@param0, @param1, @param2, GETDATE(), GETDATE());
+      INSERT INTO TeamMembers (name, role, email, status, department, createdAt, updatedAt)
+      VALUES (@param0, @param1, @param2, @param3, @param4, GETDATE(), GETDATE());
       
       SELECT SCOPE_IDENTITY() as id;
     `;
     
-    await query(sqlQuery, [name, role, email]);
+    await query(sqlQuery, [name, role, email, status, department]);
     return NextResponse.json({ success: true, message: '添加團隊成員成功' });
   } catch (error) {
     console.error('添加團隊成員失敗:', error);
+    logger.error(`添加團隊成員失敗: ${error.message}`);
     return NextResponse.json({ success: false, error: '添加團隊成員失敗' }, { status: 500 });
   }
 }
@@ -109,6 +112,7 @@ export async function PUT(request: Request) {
     });
   } catch (error) {
     console.error('更新團隊成員失敗:', error);
+    logger.error(`更新團隊成員失敗: ${error.message}`);
     return NextResponse.json({
       success: false,
       error: '更新團隊成員失敗'
@@ -151,9 +155,10 @@ export async function DELETE(request: Request) {
     });
   } catch (error) {
     console.error('刪除團隊成員失敗:', error);
+    logger.error(`刪除團隊成員失敗: ${error.message}`);
     return NextResponse.json({
       success: false,
       error: '刪除團隊成員失敗'
     }, { status: 500 });
   }
-} 
+}

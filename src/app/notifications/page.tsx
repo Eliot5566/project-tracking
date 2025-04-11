@@ -1,95 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, List, Tag, Button, Empty, Spin, message, Badge } from 'antd';
-import { BellOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Badge } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { PlusOutlined, BellOutlined } from '@ant-design/icons';
 
 interface Notification {
   id: number;
-  userId: number;
   title: string;
   content: string;
   type: string;
   isRead: boolean;
+  projectId: number | null;
+  taskId: number | null;
+  projectName?: string;
+  taskName?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
-export default function NotificationsPage() {
+const NotificationsPage = () => {
+  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
-  const userId = 1; // 假設當前用戶ID為1，實際應從用戶會話中獲取
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
 
-  // 獲取通知
   const fetchNotifications = async () => {
-    setLoading(true);
     try {
-      const response = await fetch(`/api/notifications?userId=${userId}`);
+      setLoading(true);
+      const response = await fetch('/api/notifications');
       const result = await response.json();
       
       if (result.success) {
         setNotifications(result.data);
       } else {
-        message.error('獲取通知失敗');
+        message.error('獲取通知列表失敗');
       }
     } catch (error) {
-      console.error('獲取通知錯誤:', error);
-      message.error('獲取通知失敗');
+      console.error('獲取通知列表錯誤:', error);
+      message.error('獲取通知列表失敗');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // 標記通知為已讀
-  const markAsRead = async (id: number) => {
-    try {
-      const response = await fetch('/api/notifications', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ id, isRead: true })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setNotifications(prev => prev.map(notif => 
-          notif.id === id ? { ...notif, isRead: true } : notif
-        ));
-        message.success('已標記為已讀');
-      } else {
-        message.error('標記已讀失敗');
-      }
-    } catch (error) {
-      console.error('標記已讀錯誤:', error);
-      message.error('標記已讀失敗');
-    }
-  };
-
-  // 標記所有通知為已讀
-  const markAllAsRead = async () => {
-    try {
-      const unreadNotifications = notifications.filter(n => !n.isRead);
-      
-      if (unreadNotifications.length === 0) {
-        return message.info('沒有未讀通知');
-      }
-      
-      await Promise.all(unreadNotifications.map(n => 
-        fetch('/api/notifications', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ id: n.id, isRead: true })
-        })
-      ));
-      
-      setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
-      message.success('所有通知已標記為已讀');
-    } catch (error) {
-      console.error('標記所有已讀錯誤:', error);
-      message.error('標記所有已讀失敗');
     }
   };
 
@@ -97,108 +49,212 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, []);
 
-  // 获取通知类型标签
-  const getNotificationTag = (type: string) => {
-    switch (type) {
-      case 'task':
-        return <Tag color="blue">任務</Tag>;
-      case 'project':
-        return <Tag color="green">專案</Tag>;
-      case 'system':
-        return <Tag color="purple">系統</Tag>;
-      case 'deadline':
-        return <Tag color="red">期限提醒</Tag>;
-      default:
-        return <Tag>其他</Tag>;
+  const handleAddNotification = async (values: any) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('新增通知成功');
+        setIsModalVisible(false);
+        form.resetFields();
+        fetchNotifications();
+      } else {
+        message.error('新增通知失敗');
+      }
+    } catch (error) {
+      console.error('新增通知錯誤:', error);
+      message.error('新增通知失敗');
     }
   };
 
-  // 獲取通知日期的格式化顯示
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffMins < 60) {
-      return `${diffMins} 分鐘前`;
-    } else if (diffHours < 24) {
-      return `${diffHours} 小時前`;
-    } else if (diffDays < 30) {
-      return `${diffDays} 天前`;
-    } else {
-      return date.toLocaleDateString();
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id,
+          isRead: true,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('標記為已讀成功');
+        fetchNotifications();
+      } else {
+        message.error('標記為已讀失敗');
+      }
+    } catch (error) {
+      console.error('標記為已讀錯誤:', error);
+      message.error('標記為已讀失敗');
     }
   };
+
+  const getNotificationTypeColor = (type: string) => {
+    switch (type) {
+      case '系統':
+        return 'blue';
+      case '專案':
+        return 'green';
+      case '任務':
+        return 'orange';
+      case '提醒':
+        return 'red';
+      default:
+        return 'default';
+    }
+  };
+
+  const columns: ColumnsType<Notification> = [
+    {
+      title: '標題',
+      dataIndex: 'title',
+      key: 'title',
+      width: 200,
+      render: (text: string, record: Notification) => (
+        <div>
+          {!record.isRead && <Badge dot />}
+          {text}
+        </div>
+      ),
+    },
+    {
+      title: '類型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 100,
+      render: (type: string) => (
+        <Tag color={getNotificationTypeColor(type)}>{type}</Tag>
+      ),
+    },
+    {
+      title: '內容',
+      dataIndex: 'content',
+      key: 'content',
+      ellipsis: true,
+    },
+    {
+      title: '關聯專案',
+      dataIndex: 'projectName',
+      key: 'projectName',
+      width: 150,
+    },
+    {
+      title: '關聯任務',
+      dataIndex: 'taskName',
+      key: 'taskName',
+      width: 150,
+    },
+    {
+      title: '創建時間',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_, record) => (
+        <Button
+          type="link"
+          onClick={() => handleMarkAsRead(record.id)}
+          disabled={record.isRead}
+        >
+          標記為已讀
+        </Button>
+      ),
+    },
+  ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card
-        title={
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <BellOutlined style={{ marginRight: 8 }} />
-            <span>我的通知</span>
-            <Badge 
-              count={notifications.filter(n => !n.isRead).length} 
-              style={{ marginLeft: 8 }} 
-            />
-          </div>
-        }
+    <div className="p-6">
+      <Card 
+        title="通知中心" 
+        className="mb-6"
         extra={
-          <Button type="primary" onClick={markAllAsRead} icon={<CheckOutlined />}>
-            全部標記為已讀
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsModalVisible(true)}
+          >
+            新增通知
           </Button>
         }
       >
-        <Spin spinning={loading}>
-          {notifications.length > 0 ? (
-            <List
-              itemLayout="horizontal"
-              dataSource={notifications}
-              renderItem={(item) => (
-                <List.Item
-                  style={{ 
-                    padding: '16px', 
-                    backgroundColor: item.isRead ? 'transparent' : '#f0f7ff',
-                    borderBottom: '1px solid #f0f0f0' 
-                  }}
-                  actions={[
-                    !item.isRead && (
-                      <Button type="link" onClick={() => markAsRead(item.id)}>
-                        標記為已讀
-                      </Button>
-                    )
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        {!item.isRead && (
-                          <Badge color="blue" style={{ marginRight: 8 }} />
-                        )}
-                        {getNotificationTag(item.type)}
-                        <span style={{ marginLeft: 8 }}>{item.title}</span>
-                      </div>
-                    }
-                    description={
-                      <div>
-                        <div>{item.content}</div>
-                        <div style={{ marginTop: 8, fontSize: '12px', color: '#999' }}>
-                          {formatDate(item.createdAt)}
-                        </div>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          ) : (
-            <Empty description="沒有通知" />
-          )}
-        </Spin>
+        <Table
+          columns={columns}
+          dataSource={notifications}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 個通知`,
+          }}
+          scroll={{ x: 1000 }}
+        />
       </Card>
+
+      <Modal
+        title="新增通知"
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          form.resetFields();
+        }}
+        onOk={() => form.submit()}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAddNotification}
+        >
+          <Form.Item
+            name="title"
+            label="通知標題"
+            rules={[{ required: true, message: '請輸入通知標題' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="type"
+            label="通知類型"
+            rules={[{ required: true, message: '請選擇通知類型' }]}
+          >
+            <Select>
+              <Select.Option value="系統">系統</Select.Option>
+              <Select.Option value="專案">專案</Select.Option>
+              <Select.Option value="任務">任務</Select.Option>
+              <Select.Option value="提醒">提醒</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="content"
+            label="通知內容"
+            rules={[{ required: true, message: '請輸入通知內容' }]}
+          >
+            <Input.TextArea rows={4} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
-}
+};
+
+export default NotificationsPage; 

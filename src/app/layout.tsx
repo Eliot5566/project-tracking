@@ -1,33 +1,27 @@
-"use client";
-
-// src/app/layout.tsx (Client Component)
+// src/app/layout.tsx (Server Component)
+import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider } from 'antd';
 import zhTW from 'antd/locale/zh_TW';
 import Layout from './components/Layout';
 import './globals.css';
 import type { PropsWithChildren } from 'react';
-import { useState } from 'react';
-import Navbar from './components/Navbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export default function RootLayout({ children }: PropsWithChildren) {
-  const [darkMode, setDarkMode] = useState(false);
+export const metadata: Metadata = {
+  title: '專案追蹤系統',
+  description: '一個簡單的專案追蹤系統',
+};
 
+export default function RootLayout({ children }: PropsWithChildren) {
   return (
-    <ConfigProvider
-      locale={zhTW}
-      theme={{
-        algorithm: darkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-      }}
-    >
-      <html lang="zh-TW">
-        <body className={inter.className}>
-          <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+    <html lang="zh-TW">
+      <body className={inter.className}>
+        <ConfigProvider locale={zhTW}>
           <Layout>{children}</Layout>
-        </body>
-      </html>
-    </ConfigProvider>
+        </ConfigProvider>
+      </body>
+    </html>
   );
 }

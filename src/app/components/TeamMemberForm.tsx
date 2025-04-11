@@ -27,6 +27,7 @@ interface TeamMemberFormData {
   role: string;
   department: string;
   email: string;
+  status: string; // 添加 status 欄位
 }
 
 interface TeamMemberFormProps {
@@ -106,15 +107,30 @@ export default function TeamMemberForm({ open, onClose, onSubmit, initialData }:
           label="部門"
           rules={[{ required: true, message: '請選擇部門' }]}
         >
-          <Select>
-            <Select.Option value="management">管理部</Select.Option>
-            <Select.Option value="development">技術部</Select.Option>
-            <Select.Option value="design">設計部</Select.Option>
-            <Select.Option value="qa">品質保證部</Select.Option>
-            <Select.Option value="operations">運維部</Select.Option>
-          </Select>
+          <Select
+            options={[
+              { value: 'management', label: '管理部' },
+              { value: 'development', label: '技術部' },
+              { value: 'design', label: '設計部' },
+              { value: 'qa', label: '品質保證部' },
+              { value: 'operations', label: '運維部' }
+            ]}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="status"
+          label="狀態"
+          rules={[{ required: true, message: '請選擇成員狀態' }]}
+        >
+          <Select
+            options={[
+              { value: 'active', label: '活躍' },
+              { value: 'inactive', label: '非活躍' }
+            ]}
+          />
         </Form.Item>
       </Form>
     </Modal>
   );
-} 
+}
