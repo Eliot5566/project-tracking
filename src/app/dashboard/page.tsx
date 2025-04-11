@@ -1,5 +1,5 @@
 'use client';
-
+ 
 import { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, Table, Progress, Tag, Space, Tabs, Select, DatePicker } from 'antd';
 import {
@@ -25,7 +25,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-
+ 
 interface DashboardData {
   projectStats: {
     totalProjects: number;
@@ -74,7 +74,7 @@ interface DashboardData {
     color: string;
   }>;
 }
-
+ 
 // 狀態顏色設置
 const statusColors = {
   completed: '#52c41a',
@@ -82,128 +82,65 @@ const statusColors = {
   delayed: '#ff4d4f',
   pending: '#faad14',
 };
-
+ 
 // 圓餅圖顏色
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-
+ 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('week');
-
+ 
   useEffect(() => {
-    // 這裡將來可以連接到真實 API 獲取數據
     async function fetchDashboardData() {
       setLoading(true);
       try {
-        // 模擬 API 呼叫延遲
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // 模擬數據
-        const mockData: DashboardData = {
-          projectStats: {
-            totalProjects: 12,
-            activeProjects: 8,
-            completedProjects: 3,
-            delayedProjects: 1,
-          },
-          taskStats: {
-            totalTasks: 156,
-            completedTasks: 89,
-            inProgressTasks: 45,
-            delayedTasks: 22,
-          },
-          teamStats: {
-            totalMembers: 25,
-            activeMembers: 20,
-            averageTaskCompletion: 85,
-          },
-          recentActivities: [
-            {
-              key: '1',
-              project: '專案 A',
-              activity: '完成系統架構設計',
-              status: 'completed',
-              date: '2024-03-20',
-            },
-            {
-              key: '2',
-              project: '專案 B',
-              activity: '開始進行用戶測試',
-              status: 'in_progress',
-              date: '2024-03-19',
-            },
-            {
-              key: '3',
-              project: '專案 C',
-              activity: '延遲：等待客戶反饋',
-              status: 'delayed',
-              date: '2024-03-18',
-            },
-          ],
-          projectProgress: [
-            {
-              project: '專案 A',
-              progress: 75,
-              status: 'in_progress',
-            },
-            {
-              project: '專案 B',
-              progress: 45,
-              status: 'in_progress',
-            },
-            {
-              project: '專案 C',
-              progress: 90,
-              status: 'in_progress',
-            },
-            {
-              project: '專案 D',
-              progress: 100,
-              status: 'completed',
-            },
-          ],
-          // 新增模擬數據
-          teamWorkload: [
-            { name: '張小明', activeProjects: 3, activeTasks: 12, completionRate: 85 },
-            { name: '李大偉', activeProjects: 2, activeTasks: 8, completionRate: 92 },
-            { name: '陳美玲', activeProjects: 4, activeTasks: 15, completionRate: 78 },
-            { name: '王建國', activeProjects: 1, activeTasks: 6, completionRate: 95 },
-            { name: '林佳怡', activeProjects: 3, activeTasks: 10, completionRate: 88 },
-          ],
-          weeklyProgress: [
-            { day: '週一', completed: 8, created: 12 },
-            { day: '週二', completed: 10, created: 8 },
-            { day: '週三', completed: 12, created: 10 },
-            { day: '週四', completed: 9, created: 15 },
-            { day: '週五', completed: 14, created: 7 },
-            { day: '週六', completed: 3, created: 2 },
-            { day: '週日', completed: 1, created: 1 },
-          ],
-          taskByStatus: [
-            { name: '已完成', value: 89, color: statusColors.completed },
-            { name: '進行中', value: 45, color: statusColors.in_progress },
-            { name: '延遲', value: 22, color: statusColors.delayed },
-            { name: '待處理', value: 34, color: statusColors.pending },
-          ],
+        const response = await fetch('/api/dashboard');
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+        const result = await response.json();
+ 
+        // 確保正確解析 completionRate
+        const fixedTaskStats = {
+          ...result.taskStats,
+          completionRate: result.taskStats.completionRate || 0,
         };
-        
-        setData(mockData);
+ 
+        // 修復任務完成率顯示問題
+        const fixedTeamStats = {
+          ...result.teamStats,
+          averageTaskCompletion: result.taskStats.completionRate || 0,
+        };
+ 
+        // 修復專案名稱顯示問題
+        const fixedProjectProgress = result.projectProgress.map(p => ({
+          ...p,
+          project: p.projectName || '未命名專案',
+        }));
+ 
+        setData({ ...result, teamStats: fixedTeamStats, projectProgress: fixedProjectProgress });
       } catch (error) {
         console.error('獲取儀表板數據失敗:', error);
       } finally {
         setLoading(false);
       }
     }
-
+ 
     fetchDashboardData();
-  }, [timeRange]);
-
+  }, []);
+ 
+  // 修正數據顯示邏輯，確保處理空數據情況
+  const taskByStatusData = Array.isArray(data?.taskByStatus) ? data.taskByStatus : [];
+  const projectProgressData = Array.isArray(data?.projectProgress) ? data.projectProgress : [];
+  const teamWorkloadData = Array.isArray(data?.teamWorkload) ? data.teamWorkload : [];
+  const recentActivitiesData = Array.isArray(data?.recentActivities) ? data.recentActivities : [];
+ 
   // 活動狀態標籤渲染
   const renderStatusTag = (status: string) => {
     let color = '';
     let text = '';
-
+ 
     switch (status) {
       case 'completed':
         color = statusColors.completed;
@@ -221,10 +158,10 @@ export default function DashboardPage() {
         color = statusColors.pending;
         text = '待處理';
     }
-
+ 
     return <Tag color={color}>{text}</Tag>;
   };
-
+ 
   // 活動列表表格列定義
   const activityColumns = [
     {
@@ -249,7 +186,7 @@ export default function DashboardPage() {
       key: 'date',
     },
   ];
-
+ 
   // 專案進度表格列定義
   const progressColumns = [
     {
@@ -272,7 +209,7 @@ export default function DashboardPage() {
       render: renderStatusTag,
     },
   ];
-
+ 
   return (
     <div style={{ padding: '24px' }}>
       {/* 時間範圍選擇 */}
@@ -281,9 +218,9 @@ export default function DashboardPage() {
           <Card>
             <Space>
               <span style={{ marginRight: 8 }}>數據範圍：</span>
-              <Select 
-                defaultValue="week" 
-                style={{ width: 120 }} 
+              <Select
+                defaultValue="week"
+                style={{ width: 120 }}
                 onChange={value => setTimeRange(value)}
                 options={[
                   { value: 'today', label: '今日' },
@@ -297,7 +234,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
-
+ 
       {/* 統計數字卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
@@ -359,16 +296,16 @@ export default function DashboardPage() {
               prefix={<ClockCircleOutlined />}
             />
             <div style={{ marginTop: 8 }}>
-              <Progress 
-                percent={data?.teamStats.averageTaskCompletion || 0} 
-                size="small" 
+              <Progress
+                percent={data?.teamStats.averageTaskCompletion || 0}
+                size="small"
                 showInfo={false}
               />
             </div>
           </Card>
         </Col>
       </Row>
-
+ 
       {/* 任務統計圖表 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
@@ -391,7 +328,7 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={data?.taskByStatus || []}
+                  data={taskByStatusData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -400,7 +337,7 @@ export default function DashboardPage() {
                   dataKey="value"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {data?.taskByStatus.map((entry, index) => (
+                  {Array.isArray(data?.taskByStatus) && data.taskByStatus.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -410,14 +347,14 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
-
+ 
       {/* 專案進度和團隊工作量 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
           <Card title="專案進度" loading={loading}>
             <Table
               columns={progressColumns}
-              dataSource={data?.projectProgress || []}
+              dataSource={projectProgressData}
               pagination={false}
               size="small"
             />
@@ -427,7 +364,7 @@ export default function DashboardPage() {
           <Card title="團隊工作量" loading={loading}>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
-                data={data?.teamWorkload || []}
+                data={teamWorkloadData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -442,14 +379,14 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
-
+ 
       {/* 最近活動 */}
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <Card title="最近活動" loading={loading}>
             <Table
               columns={activityColumns}
-              dataSource={data?.recentActivities || []}
+              dataSource={recentActivitiesData}
               pagination={false}
               size="small"
             />

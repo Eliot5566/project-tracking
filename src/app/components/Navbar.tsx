@@ -27,7 +27,7 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: '儀表板'
+      label: '首頁'
     },
     {
       key: '/projects',
@@ -58,6 +58,16 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       key: '/progress',
       icon: <BarChartOutlined />,
       label: '進度追蹤'
+    },
+    {
+      key: '/dashboard',
+      icon: <ProjectOutlined />,
+      label: '儀錶板'
+    },
+    {
+      key: '/notifications',
+      icon: <BellOutlined />,
+      label: '通知'
     }
   ];
 
