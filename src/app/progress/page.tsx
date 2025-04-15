@@ -278,11 +278,18 @@ const ProgressPage = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#FF0000'];
 
   // 計算績效導出數據
+  // const personalPerformanceExport = performanceData?.personalPerformance.map(p => ({
+  //   ...p,
+  //   completionRate: `${p.completionRate.toFixed(1)}%`,
+  //   onTimeRate: `${p.onTimeRate.toFixed(1)}%`,
+  //   averageDelay: `${p.averageDelay.toFixed(1)} 天`,
+  // })) || [];
+
   const personalPerformanceExport = performanceData?.personalPerformance.map(p => ({
     ...p,
-    completionRate: `${p.completionRate.toFixed(1)}%`,
-    onTimeRate: `${p.onTimeRate.toFixed(1)}%`,
-    averageDelay: `${p.averageDelay.toFixed(1)} 天`,
+    completionRate: `${(p.completionRate ?? 0).toFixed(1)}%`,
+    onTimeRate: `${(p.onTimeRate ?? 0).toFixed(1)}%`,
+    averageDelay: `${(p.averageDelay ?? 0).toFixed(1)} 天`,
   })) || [];
 
   const projectCompletionExport = performanceData?.projectCompletionRate.map(p => ({
