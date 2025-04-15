@@ -1,20 +1,66 @@
-import { query } from '@/lib/db';
+// /src/app/api/documents/route.ts
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import fs from 'fs';
+import path from 'path';
 
-export async function GET() {
+// 取得文件列表
+export async function GET(request) {
   try {
-    const documents = await query(
-      `SELECT d.*, 
-       (SELECT COUNT(*) FROM Documents WHERE parentDocumentId = d.id OR id = d.parentDocumentId) as versionCount 
-       FROM Documents d 
-       WHERE isLatestVersion = 1 
-       ORDER BY updatedAt DESC`,
-      []
-    );
-
-    return NextResponse.json(documents);
+    const documents = await query(`SELECT * FROM Documents ORDER BY createdAt DESC`);
+    return NextResponse.json({ success: true, data: documents });
   } catch (error) {
-    console.error('Error fetching documents:', error);
-    return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
+    console.error('獲取文件列表失敗:', error);
+    return NextResponse.json(
+      { success: false, error: '獲取文件列表失敗' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST 請求用於重定向到文件上傳端點
+export async function POST(request) {
+  return NextResponse.json(
+    { success: false, message: '文件上傳請使用 /api/documents/upload 端點' },
+    { status: 307, headers: { Location: '/api/documents/upload' } }
+  );
+}
+
+// 刪除文件
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: '缺少文件 ID' },
+        { status: 400 }
+      );
+    }
+
+    const document = await query(`SELECT * FROM Documents WHERE id = ?`, [id]);
+
+    if (!document.length) {
+      return NextResponse.json(
+        { success: false, error: '文件不存在' },
+        { status: 404 }
+      );
+    }
+
+    const filePath = document[0].filePath;
+    if (fs.existsSync(path.join(process.cwd(), 'public', filePath))) {
+      fs.unlinkSync(path.join(process.cwd(), 'public', filePath));
+    }
+
+    await query(`DELETE FROM Documents WHERE id = ?`, [id]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('刪除文件失敗:', error);
+    return NextResponse.json(
+      { success: false, error: '刪除文件失敗' },
+      { status: 500 }
+    );
   }
 }

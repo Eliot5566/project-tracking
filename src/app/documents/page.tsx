@@ -1,324 +1,336 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { Table, Upload, Button, Input, Tag, Space, message, Modal, List, Form } from 'antd';
-import { Comment } from '@ant-design/compatible';
-import { UploadOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Table, Button, Upload, Modal, Form, Input, message, Tag, Space } from 'antd';
+import { UploadOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
-const DocumentManagementPage: React.FC = () => {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [versionModalVisible, setVersionModalVisible] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
-  const [versionHistory, setVersionHistory] = useState<any[]>([]);
-  const [tags, setTags] = useState([]);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
+interface Document {
+  id: number;
+  fileName: string;
+  originalName: string;
+  fileType: string;
+  fileSize: number;
+  filePath: string;
+  description: string;
+  uploadedBy: string;
+  projectId: number;
+  taskId: number;
+  isLatestVersion: boolean;
+  parentDocumentId: number | null;
+  versionNumber: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function DocumentsPage() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [historyVersions, setHistoryVersions] = useState<Document[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyTitle, setHistoryTitle] = useState('');
+
+  // 撈取文件列表
+  const fetchDocuments = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/documents');
+      const result = await response.json();
+      if (result.success) {
+        // 僅顯示每組 parentDocumentId 或 id 的最新版本
+        const docs: Document[] = result.data;
+        // 以 parentDocumentId 或 id 分組，取 versionNumber 最大的那筆
+        const latestMap = new Map<number, Document>();
+        for (const doc of docs) {
+          // 主檔案 id
+          const mainId = doc.parentDocumentId || doc.id;
+          const exist = latestMap.get(mainId);
+          if (!exist || doc.versionNumber > exist.versionNumber) {
+            latestMap.set(mainId, doc);
+          }
+        }
+        setDocuments(Array.from(latestMap.values()));
+      } else {
+        message.error('無法加載文件列表');
+      }
+    } catch (error) {
+      console.error('獲取文件列表失敗:', error);
+      message.error('無法加載文件列表');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDocuments();
   }, []);
 
-  const fetchDocuments = async () => {
+  // 處理上傳，重點取出 Upload 組件傳入的檔案 (從檔案陣列中取得 originFileObj)
+  const handleUpload = async (values: any) => {
     try {
-      const response = await fetch('/api/documents');
-      if (!response.ok) {
-        throw new Error('獲取文件列表失敗');
+      const formData = new FormData();
+
+      // 若 values.file 為陣列則取第一筆資料，並從中取出 originFileObj
+      const fileItem = Array.isArray(values.file) ? values.file[0] : values.file;
+      const fileObj = fileItem && fileItem.originFileObj ? fileItem.originFileObj : fileItem;
+
+      if (!fileObj) {
+        message.error('文件格式不正確，請重新選擇');
+        return;
       }
-      
-      const data = await response.json();
-      const formattedDocs = data.map((doc: any) => ({
-        id: doc.id,
-        key: doc.id,
-        name: doc.originalName,
-        type: doc.fileType,
-        tags: doc.tags || ['未分類'],
-        uploadedAt: new Date(doc.createdAt).toLocaleString(),
-        versionCount: doc.versionCount || 1,
-        description: doc.description,
-        filePath: doc.filePath
-      }));
-      
-      setDocuments(formattedDocs);
-    } catch (error) {
-      console.error('獲取文件列表失敗:', error);
-      message.error('無法獲取文件列表');
-    }
-  };
 
-  const handleUpload = async (file: any) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('uploadedBy', 'currentUser'); // Replace with actual user info
-    formData.append('description', 'Sample description'); // Optional: Replace with actual description
-    formData.append('projectId', '1'); // Optional: Replace with actual project ID
-    formData.append('taskId', '2'); // Optional: Replace with actual task ID
+      formData.append('file', fileObj);
+      formData.append('description', values.description || '');
 
-    try {
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('文件上傳失敗');
-      }
-
       const result = await response.json();
-      const newDocument = {
-        key: documents.length + 1,
-        name: result.fileName,
-        type: file.type,
-        tags: ['未分類'],
-        uploadedAt: new Date().toLocaleString(),
-      };
-      setDocuments([...documents, newDocument]);
-      message.success(`${result.fileName} 上傳成功`);
+      if (result.success) {
+        message.success('文件上傳成功');
+        setUploadModalVisible(false);
+        form.resetFields();
+        fetchDocuments();
+      } else {
+        message.error('文件上傳失敗：' + (result.error || '未知錯誤'));
+      }
     } catch (error) {
-      console.error('上傳失敗:', error);
+      console.error('文件上傳錯誤:', error);
       message.error('文件上傳失敗');
     }
   };
 
-  const handleVersionControl = async (document: any) => {
-    setSelectedDocument(document);
-    setVersionModalVisible(true);
-
+  // 下載功能：呼叫後端下載 API，並以 Blob 建立 object URL 供瀏覽器下載
+  const handleDownload = async (filePath: string) => {
     try {
-      const response = await fetch(`/api/documents/versions?fileName=${document.name}`);
+      // 這裡使用 encodeURIComponent 處理 filePath 字串
+      const response = await fetch(
+        `/api/documents/download?filePath=${encodeURIComponent(filePath)}`
+      );
       if (!response.ok) {
-        throw new Error('無法獲取版本歷史');
+        message.error('下載失敗');
+        return;
       }
-
-      const history = await response.json();
-      setVersionHistory(history);
-    } catch (error) {
-      console.error('獲取版本歷史失敗:', error);
-      message.error('無法獲取版本歷史');
-    }
-
-    // Fetch tags and comments for the document
-    fetchTagsAndComments(document.id);
-  };
-
-  const fetchTagsAndComments = async (documentId) => {
-    try {
-      const [tagsResponse, commentsResponse] = await Promise.all([
-        fetch(`/api/documents/tags?documentId=${documentId}`),
-        fetch(`/api/documents/comments?documentId=${documentId}`),
-      ]);
-
-      if (!tagsResponse.ok || !commentsResponse.ok) {
-        throw new Error('Failed to fetch tags or comments');
-      }
-
-      const tagsData = await tagsResponse.json();
-      const commentsData = await commentsResponse.json();
-
-      setTags(tagsData);
-      setComments(commentsData);
-    } catch (error) {
-      console.error('Error fetching tags or comments:', error);
-      message.error('無法獲取標籤或評論');
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-
-    try {
-      const response = await fetch(`/api/documents/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documentId: selectedDocument.id,
-          commentedBy: 'currentUser', // Replace with actual user info
-          content: newComment,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add comment');
-      }
-
-      const addedComment = await response.json();
-      setComments([...comments, addedComment]);
-      setNewComment('');
-      message.success('評論已新增');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      message.error('無法新增評論');
-    }
-  };
-
-  const handleUploadNewVersion = async (file: any) => {
-    if (!selectedDocument) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await fetch(`/api/documents/upload?fileName=${selectedDocument.name}`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('新版本上傳失敗');
-      }
-
-      const result = await response.json();
-      message.success(`${result.fileName} 新版本上傳成功`);
-
-      // 更新版本歷史
-      handleVersionControl(selectedDocument);
-    } catch (error) {
-      console.error('新版本上傳失敗:', error);
-      message.error('新版本上傳失敗');
-    }
-  };
-
-  const handleDownloadVersion = async (fileName: string, version: number) => {
-    try {
-      const response = await fetch(`/public/uploads/general/${fileName}_v${version}`);
-      if (!response.ok) {
-        throw new Error('下載失敗');
-      }
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.style.display = 'none';
       a.href = url;
-      a.download = `${fileName}_v${version}`;
-      document.body.appendChild(a);
+      a.download = filePath.split('/').pop() || 'file';
       a.click();
       window.URL.revokeObjectURL(url);
-      message.success('下載成功');
     } catch (error) {
-      console.error('下載失敗:', error);
+      console.error('下載錯誤:', error);
       message.error('下載失敗');
+    }
+  };
+
+  // 歷史版本查詢
+  const showHistory = async (record: Document) => {
+    setHistoryModalVisible(true);
+    setHistoryLoading(true);
+    setHistoryTitle(record.originalName);
+    try {
+      const parentId = record.parentDocumentId || record.id;
+      const res = await fetch(`/api/documents/history?parentId=${parentId}`);
+      const result = await res.json();
+      if (result.success) {
+        setHistoryVersions(result.data);
+      } else {
+        setHistoryVersions([]);
+        message.error('查詢歷史版本失敗');
+      }
+    } catch (e) {
+      setHistoryVersions([]);
+      message.error('查詢歷史版本失敗');
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
   const columns = [
     {
       title: '文件名稱',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'originalName',
+      key: 'originalName',
     },
     {
       title: '文件類型',
-      dataIndex: 'type',
-      key: 'type',
+      dataIndex: 'fileType',
+      key: 'fileType',
     },
     {
-      title: '標籤',
-      dataIndex: 'tags',
-      key: 'tags',
-      render: (tags: string[]) => (
-        <>{tags.map(tag => <Tag key={tag}>{tag}</Tag>)}</>
-      ),
+      title: '版本',
+      dataIndex: 'versionNumber',
+      key: 'versionNumber',
+      render: (version: number) => <Tag>{`v${version}`}</Tag>,
+    },
+    {
+      title: '上傳者',
+      dataIndex: 'uploadedBy',
+      key: 'uploadedBy',
     },
     {
       title: '上傳時間',
-      dataIndex: 'uploadedAt',
-      key: 'uploadedAt',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: any) => (
-        <Space size="middle">
-          <Button type="link" onClick={() => handleVersionControl(record)}>版本控制</Button>
-          <Button type="link" danger>
-            刪除
+      render: (_: any, record: Document) => (
+        <Space>
+          <Button icon={<DownloadOutlined />} onClick={() => handleDownload(record.filePath)}>
+            下載
+          </Button>
+          <Button icon={<HistoryOutlined />} onClick={() => showHistory(record)}>
+            歷史版本
           </Button>
         </Space>
       ),
     },
   ];
 
+  // 歷史版本 Modal 內容
+  const [uploadingVersion, setUploadingVersion] = useState(false);
+  const [versionForm] = Form.useForm();
+
+  const handleUploadVersion = async (values: any) => {
+    try {
+      setUploadingVersion(true);
+      const formData = new FormData();
+      const fileItem = Array.isArray(values.file) ? values.file[0] : values.file;
+      const fileObj = fileItem && fileItem.originFileObj ? fileItem.originFileObj : fileItem;
+      if (!fileObj) {
+        message.error('文件格式不正確，請重新選擇');
+        return;
+      }
+      formData.append('file', fileObj);
+      formData.append('description', values.description || '');
+      // 決定主檔案 id：如果 parentDocumentId 有值就用它，否則用 id
+      const mainId = historyVersions.find(v => v.parentDocumentId === null)?.id || historyVersions[0]?.parentDocumentId || historyVersions[0]?.id;
+      formData.append('parentDocumentId', String(mainId));
+      formData.append('versionNumber', String((Math.max(...historyVersions.map(v => v.versionNumber)) || 1) + 1));
+      // 其餘欄位如需 projectId、taskId 可自行補充
+      const response = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        message.success('新版本上傳成功');
+        versionForm.resetFields();
+        setHistoryModalVisible(false);
+        fetchDocuments();
+      } else {
+        message.error('新版本上傳失敗：' + (result.error || '未知錯誤'));
+      }
+    } catch (error) {
+      message.error('新版本上傳失敗');
+    } finally {
+      setUploadingVersion(false);
+    }
+  };
+
+  // 歷史版本 Modal 內容
+  const historyColumns = [
+    { title: '版本', dataIndex: 'versionNumber', key: 'versionNumber', render: (v: number) => <Tag>v{v}</Tag> },
+    { title: '上傳時間', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm:ss') },
+    { title: '上傳者', dataIndex: 'uploadedBy', key: 'uploadedBy' },
+    { title: '描述', dataIndex: 'description', key: 'description' },
+    { title: '操作', key: 'action', render: (_: any, rec: Document) => (
+      <Button icon={<DownloadOutlined />} onClick={() => handleDownload(rec.filePath)} size="small">下載</Button>
+    ) },
+  ];
+
   return (
-    <div style={{ padding: 24 }}>
-      <h1>文件管理</h1>
-      <Space style={{ marginBottom: 16 }}>
-        <Input
-          placeholder="搜索文件"
-          prefix={<SearchOutlined />}
-          onChange={e => setSearchText(e.target.value)}
+    <div style={{ padding: '24px' }}>
+      <Button
+        type="primary"
+        icon={<UploadOutlined />}
+        onClick={() => setUploadModalVisible(true)}
+        style={{ marginBottom: '16px' }}
+      >
+        上傳文件
+      </Button>
+
+      <Table columns={columns} dataSource={documents} rowKey="id" loading={loading} />
+      {/* 歷史版本 Modal */}
+      <Modal
+        title={`歷史版本 - ${historyTitle}`}
+        open={historyModalVisible}
+        onCancel={() => setHistoryModalVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <Table
+          columns={historyColumns}
+          dataSource={historyVersions}
+          rowKey="id"
+          loading={historyLoading}
+          size="small"
+          pagination={false}
         />
-        <Upload
-          beforeUpload={file => {
-            handleUpload(file);
-            return false;
-          }}
-        >
-          <Button icon={<UploadOutlined />}>上傳文件</Button>
-        </Upload>
-      </Space>
-      <Table columns={columns} dataSource={documents.filter(doc => doc.name.toLowerCase().includes(searchText.toLowerCase()))} />
+        <div style={{ marginTop: 24 }}>
+          <Form form={versionForm} layout="vertical" onFinish={handleUploadVersion}>
+            <Form.Item
+              name="file"
+              label="上傳新版本"
+              valuePropName="fileList"
+              getValueFromEvent={e => (Array.isArray(e) ? e : e && e.fileList)}
+              rules={[{ required: true, message: '請選擇文件' }]}
+            >
+              <Upload beforeUpload={() => false} maxCount={1}>
+                <Button icon={<UploadOutlined />}>選擇文件</Button>
+              </Upload>
+            </Form.Item>
+            <Form.Item name="description" label="版本描述">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={uploadingVersion} block>
+                上傳新版本
+              </Button>
+            </Form.Item>
+          </Form>
+        </div>
+      </Modal>
 
       <Modal
-        title={`文件詳情 - ${selectedDocument?.name}`}
-        visible={versionModalVisible}
-        onCancel={() => setVersionModalVisible(false)}
+        title="上傳文件"
+        open={uploadModalVisible}
+        onCancel={() => setUploadModalVisible(false)}
         footer={null}
       >
-        <h3>標籤</h3>
-        <div>
-          {tags.map(tag => (
-            <Tag key={tag.id} color={tag.color}>{tag.name}</Tag>
-          ))}
-        </div>
+        <Form form={form} layout="vertical" onFinish={handleUpload}>
+          <Form.Item
+            name="file"
+            label="選擇文件"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => (Array.isArray(e) ? e : e && e.fileList)}
+            rules={[{ required: true, message: '請選擇文件' }]}
+          >
+            <Upload beforeUpload={() => false} maxCount={1}>
+              <Button icon={<UploadOutlined />}>選擇文件</Button>
+            </Upload>
+          </Form.Item>
 
-        <h3>評論</h3>
-        <List
-          dataSource={comments}
-          renderItem={comment => (
-            <Comment
-              author={comment.commentedBy}
-              content={comment.content}
-              datetime={comment.createdAt}
-            />
-          )}
-        />
-        <Form.Item>
-          <Input.TextArea
-            rows={4}
-            value={newComment}
-            onChange={e => setNewComment(e.target.value)}
-            placeholder="新增評論"
-          />
-        </Form.Item>
-        <Button type="primary" onClick={handleAddComment}>提交評論</Button>
+          <Form.Item name="description" label="文件描述">
+            <Input.TextArea rows={4} />
+          </Form.Item>
 
-        <h3>版本歷史</h3>
-        <ul>
-          {versionHistory.map((version, index) => (
-            <li key={index}>
-              版本 {version.version} - 上傳時間: {version.uploadedAt}
-              <Button
-                type="link"
-                icon={<DownloadOutlined />}
-                onClick={() => handleDownloadVersion(selectedDocument.name, version.version)}
-              >
-                下載
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <Upload
-          beforeUpload={file => {
-            handleUploadNewVersion(file);
-            return false;
-          }}
-        >
-          <Button icon={<UploadOutlined />}>上傳新版本</Button>
-        </Upload>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              上傳
+            </Button>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
-};
-
-export default DocumentManagementPage;
+}

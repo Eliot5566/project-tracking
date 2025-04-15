@@ -41,3 +41,13 @@ yarn-error.log*
 next-env.d.ts
 
 .env.local
+
+# 忽略 上傳的檔案public/uploads
+/uploads/*
+/public/uploads/*
+
+# 忽略 lib下的檔案
+/src/lib/*
+
+/src/lib/*
+/lib/*

@@ -1,7 +1,7 @@
 "use client";
 
 import { Row, Col, Card, Typography, Button } from 'antd';
-import { ProjectOutlined, LineChartOutlined, TeamOutlined } from '@ant-design/icons';
+import { ProjectOutlined, LineChartOutlined, TeamOutlined, FileOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
 const { Title, Text } = Typography;
@@ -24,7 +24,13 @@ const features = [
     description: '促進團隊成員之間的溝通與協作，提升專案效率。',
     icon: <TeamOutlined style={{ fontSize: 40 }} />,
     path: '/team'
-  }
+  },
+  // {
+  //   title: '文件管理',
+  //   description: '上傳和管理專案文件，追蹤歷史版本。',
+  //   icon: <FileOutlined style={{ fontSize: 40 }} />,
+  //   path: '/documents'
+  // },
 ];
 
 export default function Home() {

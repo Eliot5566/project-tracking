@@ -1,110 +1,121 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { query } from '@/lib/db';
-import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'general');
+// 非同步確保目錄存在
+async function ensureDirectoryExists(dirPath: string) {
+  if (!existsSync(dirPath)) {
+    await mkdir(dirPath, { recursive: true });
+  }
+}
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
-    const description = formData.get('description') as string;
-    const uploadedBy = formData.get('uploadedBy') as string;
-    const projectId = formData.get('projectId') as string | null;
-    const taskId = formData.get('taskId') as string | null;
+    // 1. 設定上傳目錄：public/uploads/general
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'general');
+    await ensureDirectoryExists(uploadDir);
 
-    if (!file || !uploadedBy) {
-      return NextResponse.json({ error: 'File and uploadedBy are required' }, { status: 400 });
+    // 2. 解析前端傳來的 FormData
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const description = formData.get('description')?.toString() || '';
+
+    // 可選：讀取 projectId 與 taskId（如果有傳）
+    const projectId = formData.get('projectId') ? Number(formData.get('projectId')) : null;
+    const taskId = formData.get('taskId') ? Number(formData.get('taskId')) : null;
+
+    // 讀取 parentDocumentId 與 versionNumber（如有傳遞）
+    const parentDocumentIdRaw = formData.get('parentDocumentId');
+    const versionNumberRaw = formData.get('versionNumber');
+    const parentDocumentId = parentDocumentIdRaw !== null && parentDocumentIdRaw !== undefined && parentDocumentIdRaw !== '' ? Number(parentDocumentIdRaw) : null;
+    const versionNumber = versionNumberRaw !== null && versionNumberRaw !== undefined && versionNumberRaw !== '' ? Number(versionNumberRaw) : 1;
+
+    // 3. 檢查是否有上傳檔案，並確認 file 為 File 物件
+    if (!file || !(file instanceof File)) {
+      return NextResponse.json(
+        { success: false, error: '未提供或非合法文件' },
+        { status: 400 }
+      );
     }
 
-    const fileName = file.name;
-    const filePath = path.join(UPLOAD_DIR, fileName);
-    const fileType = file.type;
-    const fileSize = file.size;
+    // 4. 取得檔案資訊與產生唯一檔案名稱
+    const originalName = file.name || `file_${Date.now()}`;
+    const fileExtension = path.extname(originalName) || '';
+    const fileType = file.type || 'application/octet-stream';
+    const fileSize = file.size || 0;
+    const uniqueName = `${path.basename(originalName, fileExtension)}_${uuidv4()}${fileExtension}`;
 
-    // 確保目標目錄存在
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    // 5. 設定儲存在資料庫中的 filePath（帶有前置斜線，以符合資料表）
+    const filePath = `/uploads/general/${uniqueName}`;
+    // 實際存檔的完整路徑 (移除前置斜線)
+    const fullPath = path.join(process.cwd(), 'public', filePath.replace(/^\/+/, ''));
 
-    // 檢查是否存在同名文件
-    let versionNumber = 1;
-    let newFilePath = filePath;
-    let parentDocumentId = null;
-    while (await fileExists(newFilePath)) {
-      const ext = path.extname(fileName);
-      const baseName = path.basename(fileName, ext);
-      newFilePath = path.join(UPLOAD_DIR, `${baseName}_v${versionNumber}${ext}`);
-      versionNumber++;
-    }
-
-    // 保存文件
+    // 6. 寫入檔案到硬碟
     const arrayBuffer = await file.arrayBuffer();
-    await fs.writeFile(newFilePath, Buffer.from(arrayBuffer));
+    await writeFile(fullPath, Buffer.from(arrayBuffer));
 
-    // 更新資料庫
-  const result = await query(
-      `INSERT INTO Documents (fileName, originalName, fileType, fileSize, filePath, description, uploadedBy, projectId, taskId, isLatestVersion, parentDocumentId, versionNumber, createdAt, updatedAt)
-       VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13)`,
-      [
-        path.basename(newFilePath),
+    // 7. 組成 SQL 查詢與參數陣列，改用 @param0, @param1, ...
+    const sql = `
+      INSERT INTO Documents (
         fileName,
+        originalName,
         fileType,
         fileSize,
-        newFilePath,
+        filePath,
         description,
         uploadedBy,
         projectId,
         taskId,
-        1,
+        isLatestVersion,
         parentDocumentId,
         versionNumber,
-        new Date().toISOString(),
-        new Date().toISOString(),
-      ]
-    );
+        createdAt,
+        updatedAt
+      )
+      VALUES (
+        @param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8,
+        1,    -- isLatestVersion: 1 表示最新版本
+        @param9, -- parentDocumentId
+        @param10, -- versionNumber
+        GETDATE(),
+        GETDATE()
+      )
+    `;
+    const params = [
+      uniqueName,
+      originalName,
+      fileType,
+      fileSize,
+      filePath,
+      description,
+      1, // 假設上傳者 userId 為 1，請依實際登入者調整
+      projectId,
+      taskId,
+      parentDocumentId,
+      versionNumber
+    ];
 
-    // 更新舊版本的 isLatestVersion
-    if (parentDocumentId) {
-      await query(
-        `UPDATE Documents SET isLatestVersion = 0 WHERE id = ?`,
-        [parentDocumentId]
-      );
-    }
+    // 8. 執行 SQL 查詢
+    const result = await query(sql, params);
 
-    return NextResponse.json({ message: 'File uploaded successfully', documentId: result.insertId });
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: result.insertId ?? null,
+        filePath,
+        originalName,
+        fileSize,
+        description,
+      },
+    });
   } catch (error) {
-    console.error('File upload error:', error);
-    return NextResponse.json({ error: 'File upload failed' }, { status: 500 });
-  }
-}
-
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const fileName = searchParams.get('fileName');
-
-    if (!fileName) {
-      return NextResponse.json({ error: 'File name is required' }, { status: 400 });
-    }
-
-    const versions = await query(
-      `SELECT version, uploadedAt FROM FileVersions WHERE fileName LIKE ? ORDER BY version ASC`,
-      [`${fileName}%`]
+    console.error('文件上傳失敗:', error);
+    return NextResponse.json(
+      { success: false, error: '文件上傳失敗: ' + (error instanceof Error ? error.message : '未知錯誤') },
+      { status: 500 }
     );
-
-    return NextResponse.json(versions);
-  } catch (error) {
-    console.error('Error fetching file versions:', error);
-    return NextResponse.json({ error: 'Failed to fetch file versions' }, { status: 500 });
-  }
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
   }
 }

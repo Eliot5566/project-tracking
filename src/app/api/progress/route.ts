@@ -68,4 +68,4 @@ export async function GET(request: Request) {
       error: '獲取進度資訊失敗'
     }, { status: 500 });
   }
-} 
+}

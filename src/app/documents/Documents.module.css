@@ -1,0 +1,12 @@
+/* 文件管理頁面樣式 */
+.table {
+  margin-top: 16px;
+}
+
+.uploadButton {
+  margin-bottom: 16px;
+}
+
+.modal {
+  padding: 24px;
+}
