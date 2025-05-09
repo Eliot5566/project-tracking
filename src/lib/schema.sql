@@ -130,6 +130,17 @@ CREATE TABLE DocumentComments (
     FOREIGN KEY (documentId) REFERENCES Documents(id)
 );
 
+CREATE TABLE Audit (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    startDate DATE NOT NULL,
+    endDate DATE NOT NULL,
+    department NVARCHAR(50) NOT NULL,
+    content NVARCHAR(255) NOT NULL,
+    createdAt DATETIME NOT NULL DEFAULT GETDATE(),
+    updatedAt DATETIME NOT NULL DEFAULT GETDATE()
+);
+
+
 -- 建立索引
 CREATE INDEX IX_Tasks_ProjectId ON Tasks(projectId);
 CREATE INDEX IX_Tasks_AssignedTo ON Tasks(assignedTo);

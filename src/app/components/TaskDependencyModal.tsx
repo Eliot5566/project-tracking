@@ -188,6 +188,9 @@ const TaskDependencyModal: React.FC<TaskDependencyModalProps> = ({ visible, task
               onChange={setSelectedTask}
               showSearch
               filterOption={(input, option) =>
+                // 傳入的 option 是 SelectProps['options'] 的類型  input 是 string
+                // 如果 option.label 是 string，則可以直接使用 toLowerCase() 方法
+                // 否則需要使用 (option?.label ?? '').toLowerCase() 來避免 undefined 的情況
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
             />

@@ -22,19 +22,21 @@ export async function GET() {
         tm.id,
         tm.name,
         tm.role,
+        tm.department,
+        tm.status,
         tm.email,
         COUNT(DISTINCT p.id) as projectCount,
-        COUNT(DISTINCT t.id) as taskCount,
+        COUNT(t.id) as taskCount,
         CASE 
-          WHEN COUNT(DISTINCT t.id) = 0 THEN 0
-          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(DISTINCT t.id) * 100
+          WHEN COUNT(t.id) = 0 THEN 0
+          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
         END as averageProgress,
         tm.createdAt,
         tm.updatedAt
       FROM TeamMembers tm
       LEFT JOIN Projects p ON tm.id = p.managerId
       LEFT JOIN Tasks t ON tm.id = t.assigneeId
-      GROUP BY tm.id, tm.name, tm.role, tm.email, tm.createdAt, tm.updatedAt
+      GROUP BY tm.id, tm.name, tm.role, tm.department, tm.status, tm.email, tm.createdAt, tm.updatedAt
       ORDER BY tm.createdAt DESC
     `;
     const result = await query(sqlQuery);
@@ -48,20 +50,16 @@ export async function GET() {
 // 創建新團隊成員
 export async function POST(request: NextRequest) {
   try {
-    const { name, role, email } = await request.json();
-    
-    if (!name || !role || !email) {
+    const { name, role, department, status = 'active', email } = await request.json();
+    if (!name || !role || !department || !email) {
       return NextResponse.json({ success: false, error: '缺少必要參數' }, { status: 400 });
     }
-
     const sqlQuery = `
-      INSERT INTO TeamMembers (name, role, email, createdAt, updatedAt)
-      VALUES (@param0, @param1, @param2, GETDATE(), GETDATE());
-      
+      INSERT INTO TeamMembers (name, role, department, status, email, createdAt, updatedAt)
+      VALUES (@param0, @param1, @param2, @param3, @param4, GETDATE(), GETDATE());
       SELECT SCOPE_IDENTITY() as id;
     `;
-    
-    await query(sqlQuery, [name, role, email]);
+    await query(sqlQuery, [name, role, department, status, email]);
     return NextResponse.json({ success: true, message: '添加團隊成員成功' });
   } catch (error) {
     console.error('添加團隊成員失敗:', error);
@@ -96,7 +94,7 @@ export async function PUT(request: Request) {
       id
     ]);
 
-    if (updatedMember.length === 0) {
+    if (!Array.isArray(updatedMember) || updatedMember.length === 0) {
       return NextResponse.json({
         success: false,
         error: '找不到指定的團隊成員'
@@ -138,7 +136,7 @@ export async function DELETE(request: Request) {
 
     const deletedMember = await query<TeamMember[]>(sqlQuery, [id]);
 
-    if (deletedMember.length === 0) {
+    if (!Array.isArray(deletedMember) || deletedMember.length === 0) {
       return NextResponse.json({
         success: false,
         error: '找不到指定的團隊成員'

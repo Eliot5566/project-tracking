@@ -65,6 +65,11 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       label: '儀錶板'
     },
     {
+      key: '/documents',
+      icon: <ProjectOutlined />,
+      label: '文件管理'
+    },
+    {
       key: '/notifications',
       icon: <BellOutlined />,
       label: '通知'

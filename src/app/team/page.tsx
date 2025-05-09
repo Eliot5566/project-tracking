@@ -9,6 +9,8 @@ interface TeamMember {
   id: number;
   name: string;
   role: string;
+  department: string;
+  status: string;
   email: string;
   projectCount: number;
   taskCount: number;
@@ -20,6 +22,7 @@ interface TeamMember {
 interface TeamMemberFormData {
   name: string;
   role: string;
+  department: string;
   email: string;
 }
 
@@ -55,6 +58,7 @@ export default function TeamPage() {
 
   const handleAddMember = async (values: TeamMemberFormData) => {
     try {
+      // 這裡可以添加額外的驗證邏輯
       const response = await fetch('/api/team', {
         method: 'POST',
         headers: {
@@ -62,7 +66,6 @@ export default function TeamPage() {
         },
         body: JSON.stringify(values),
       });
-      
       const result = await response.json();
       if (result.success) {
         message.success('添加團隊成員成功');
@@ -85,14 +88,19 @@ export default function TeamPage() {
       key: 'name',
     },
     {
-      title: '角色',
+      title: '職位',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string) => (
-        <Tooltip title={role === '管理員' ? '擁有管理權限' : '普通成員'}>
-          <Tag color={role === '管理員' ? 'red' : 'blue'}>{role}</Tag>
-        </Tooltip>
-      ),
+    },
+    {
+      title: '部門',
+      dataIndex: 'department',
+      key: 'department',
+    },
+    {
+      title: '狀態',
+      dataIndex: 'status',
+      key: 'status',
     },
     {
       title: '負責專案數',
@@ -109,8 +117,8 @@ export default function TeamPage() {
       dataIndex: 'averageProgress',
       key: 'averageProgress',
       render: (progress: number) => (
-        <Tooltip title={`平均完成進度為 ${progress.toFixed(2)}%`}>
-          {progress.toFixed(2)}%
+        <Tooltip title={`平均完成進度為 ${(progress ?? 0).toFixed(2)}%`}>
+          {(progress ?? 0).toFixed(2)}%
         </Tooltip>
       ),
     },
@@ -191,14 +199,41 @@ export default function TeamPage() {
             </Form.Item>
             <Form.Item
               name="role"
-              label="角色"
-              rules={[{ required: true, message: '請選擇角色' }]}
+              label="職位"
+              rules={[{ required: true, message: '請輸入職位' }]}
             >
-              <Select placeholder="選擇角色">
-                <Select.Option value="管理員">管理員</Select.Option>
-                <Select.Option value="成員">成員</Select.Option>
+              <Select
+                placeholder="選擇職位"
+                onChange={(value) => {
+                  if (value === 'security_officer') {
+                    form.setFieldsValue({ department: '資安課' });
+                  } else if (value === 'developer') {
+                    form.setFieldsValue({ department: '系統課' });
+                  } else if (value === 'project_manager') {
+                    form.setFieldsValue({ department: '資訊部' });
+                  }
+                }}
+              >
+                <Select.Option value="frontend_developer">前端開發</Select.Option>
+                <Select.Option value="backend_developer">後端開發</Select.Option>
+                {/* <Select.Option value="designer">設計師</Select.Option> */}
+                <Select.Option value="developer">資訊工程師</Select.Option>
+                <Select.Option value="security_officer">資安工程師</Select.Option>
+                <Select.Option value="project_manager">專案經理</Select.Option>
               </Select>
             </Form.Item>
+            <Form.Item
+              name="department"
+              label="部門"
+              rules={[{ required: true, message: '請輸入部門' }]}
+            >
+              <Select placeholder="選擇部門">
+                <Select.Option value="資訊部">資訊部</Select.Option>
+                <Select.Option value="系統課">系統課</Select.Option>
+                <Select.Option value="資安課">資安課</Select.Option>
+              </Select>
+            </Form.Item>
+
             <Form.Item
               name="email"
               label="電子郵件"
