@@ -64,12 +64,20 @@ export async function GET() {
     `;
     const recentTasks = await query<any[]>(recentTasksQuery);
  
+    // 動態計算每個專案的任務完成率作為進度
     const projectProgressQuery = `
       SELECT
-        name AS projectName,
-        progress AS progress
-      FROM Projects
-      WHERE status = '進行中'
+        p.name AS projectName,
+        ISNULL(
+          CASE WHEN COUNT(t.id) = 0 THEN 0
+               ELSE CAST(SUM(CASE WHEN LOWER(t.status) = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+          END, 0
+        ) AS progress,
+        p.status
+      FROM Projects p
+      LEFT JOIN Tasks t ON t.projectId = p.id
+      WHERE p.status = '進行中'
+      GROUP BY p.id, p.name, p.status
       ORDER BY progress DESC
     `;
     const projectProgress = await query<any[]>(projectProgressQuery);

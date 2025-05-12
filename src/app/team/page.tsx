@@ -219,7 +219,7 @@ export default function TeamPage() {
                 {/* <Select.Option value="designer">設計師</Select.Option> */}
                 <Select.Option value="developer">資訊工程師</Select.Option>
                 <Select.Option value="security_officer">資安工程師</Select.Option>
-                <Select.Option value="project_manager">專案經理</Select.Option>
+                <Select.Option value="project_manager">經理</Select.Option>
               </Select>
             </Form.Item>
             <Form.Item

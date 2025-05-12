@@ -10,34 +10,35 @@ interface PerformanceData {
   timeTracking: TimeTracking[];
 }
 
+
 interface PersonalPerformance {
   memberId: number;
   name: string;
   tasksAssigned: number;
   tasksCompleted: number;
-  completionRate: number;
-  onTimeRate: number;
+  completionRate: number | null;
+  onTimeRate: number | null;
   averageDelay: number; // 單位: 天
 }
 
 interface ProjectCompletionRate {
   projectId: number;
   name: string;
-  plannedDuration: number; // 單位: 天
-  actualDuration: number; // 單位: 天
-  efficiency: number; // 實際/計畫
+  plannedDuration: number;
+  actualDuration: number;
+  efficiency: number | null;
   tasksOnTime: number;
   tasksDelayed: number;
-  onTimeRate: number;
+  onTimeRate: number | null;
 }
 
 interface OverallStats {
   totalProjects: number;
   completedProjects: number;
   delayedProjects: number;
-  projectCompletionRate: number;
-  taskCompletionRate: number;
-  averageTeamPerformance: number;
+  projectCompletionRate: number | null;
+  taskCompletionRate: number | null;
+  averageTeamPerformance: number | null;
 }
 
 interface TimeTracking {
@@ -78,11 +79,15 @@ export async function GET(req: Request) {
       SELECT 
         t.assignedTo as memberId,
         m.name,
-        COUNT(*) as tasksAssigned,
+        COUNT(DISTINCT t.id) as tasksAssigned,
         SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as tasksCompleted,
-        CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as DECIMAL(5,2)) as completionRate,
-        CAST(SUM(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) <= 0 THEN 1 ELSE 0 END) * 100.0 / 
-             NULLIF(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END), 0) as DECIMAL(5,2)) as onTimeRate,
+        CASE WHEN COUNT(DISTINCT t.id) = 0 THEN NULL
+             ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) * 100.0 / COUNT(DISTINCT t.id) as DECIMAL(5,2))
+        END as completionRate,
+        CASE WHEN SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) = 0 THEN NULL
+             ELSE CAST(SUM(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) <= 0 THEN 1 ELSE 0 END) * 100.0 /
+                  SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as DECIMAL(5,2))
+        END as onTimeRate,
         AVG(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) > 0 
           THEN DATEDIFF(day, t.dueDate, t.updatedAt) ELSE 0 END) as averageDelay
       FROM Tasks t
@@ -97,12 +102,19 @@ export async function GET(req: Request) {
         p.name,
         DATEDIFF(day, p.startDate, p.endDate) as plannedDuration,
         DATEDIFF(day, p.startDate, CASE WHEN p.status = 'completed' THEN p.updatedAt ELSE GETDATE() END) as actualDuration,
-        CAST(DATEDIFF(day, p.startDate, CASE WHEN p.status = 'completed' THEN p.updatedAt ELSE GETDATE() END) * 100.0 / 
-             NULLIF(DATEDIFF(day, p.startDate, p.endDate), 0) as DECIMAL(5,2)) as efficiency,
+        CASE WHEN DATEDIFF(day, p.startDate, p.endDate) < 1 THEN NULL
+             ELSE CAST(
+               DATEDIFF(day, p.startDate, CASE WHEN p.status = 'completed' THEN p.updatedAt ELSE GETDATE() END) * 100.0 /
+               DATEDIFF(day, p.startDate, p.endDate)
+               AS DECIMAL(5,2)
+             )
+        END as efficiency,
         SUM(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) <= 0 THEN 1 ELSE 0 END) as tasksOnTime,
         SUM(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) > 0 THEN 1 ELSE 0 END) as tasksDelayed,
-        CAST(SUM(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) <= 0 THEN 1 ELSE 0 END) * 100.0 / 
-             NULLIF(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END), 0) as DECIMAL(5,2)) as onTimeRate
+        CASE WHEN SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) = 0 THEN NULL
+             ELSE CAST(SUM(CASE WHEN t.status = 'completed' AND DATEDIFF(day, t.dueDate, t.updatedAt) <= 0 THEN 1 ELSE 0 END) * 100.0 /
+                  SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as DECIMAL(5,2))
+        END as onTimeRate
       FROM Projects p
       LEFT JOIN Tasks t ON p.id = t.projectId
       WHERE ${projectDateFilter}
@@ -112,12 +124,12 @@ export async function GET(req: Request) {
     const overallStats = await query<OverallStats[]>(`
       SELECT
         (SELECT COUNT(*) FROM Projects p WHERE ${projectDateFilter}) as totalProjects,
-        (SELECT COUNT(*) FROM Projects p WHERE p.status = 'completed' AND ${projectDateFilter}) as completedProjects,
-        (SELECT COUNT(*) FROM Projects p WHERE p.status = 'delayed' AND ${projectDateFilter}) as delayedProjects,
-        (SELECT CAST(COUNT(CASE WHEN p.status = 'completed' THEN 1 ELSE NULL END) * 100.0 / 
+        (SELECT COUNT(*) FROM Projects p WHERE p.status = N'已完成' AND ${projectDateFilter}) as completedProjects,
+        (SELECT COUNT(*) FROM Projects p WHERE p.status != N'已完成' AND GETDATE() > p.endDate AND ${projectDateFilter}) as delayedProjects,
+        (SELECT CAST(COUNT(CASE WHEN p.status = N'已完成' THEN 1 ELSE NULL END) * 100.0 /
                  NULLIF(COUNT(*), 0) as DECIMAL(5,2))
          FROM Projects p WHERE ${projectDateFilter}) as projectCompletionRate,
-        (SELECT CAST(COUNT(CASE WHEN t.status = 'completed' THEN 1 ELSE NULL END) * 100.0 / 
+        (SELECT CAST(COUNT(CASE WHEN t.status = 'completed' THEN 1 ELSE NULL END) * 100.0 /
                  NULLIF(COUNT(*), 0) as DECIMAL(5,2))
          FROM Tasks t WHERE ${taskDateFilter}) as taskCompletionRate,
         (SELECT CAST(AVG(completionRate) as DECIMAL(5,2))

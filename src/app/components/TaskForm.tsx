@@ -110,28 +110,13 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
       const taskData = {
         ...values,
         dueDate: values.dueDate.format('YYYY-MM-DD'),
-        progress: values.status === 'completed' ? 100 : values.progress || 0
+        progress: values.status === 'completed' ? 100 : values.progress || 0,
+        ...(initialData?.id ? { id: initialData.id } : {})
       };
-
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        message.success('任務創建成功');
-        onClose();
-      } else {
-        message.error('創建任務失敗');
-      }
+      await onSubmit(taskData);
+      onClose();
     } catch (error) {
-      console.error('創建任務錯誤:', error);
-      message.error('創建任務失敗');
+      message.error('任務儲存失敗');
     }
   };
 

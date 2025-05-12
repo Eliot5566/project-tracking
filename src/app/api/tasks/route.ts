@@ -230,29 +230,28 @@ export async function DELETE(request: Request) {
       }, { status: 400 });
     }
 
-    const sqlQuery = `
-      DELETE FROM Tasks
-      WHERE id = @param0;
-      
+    // 先查詢要刪除的任務
+    const taskToDelete = await query<Task[]>(`
       SELECT t.*, p.name as projectName, tm.name as assignedToName
       FROM Tasks t
       LEFT JOIN Projects p ON t.projectId = p.id
       LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id
       WHERE t.id = @param0;
-    `;
+    `, [id]);
 
-    const deletedTask = await query<Task[]>(sqlQuery, [id]);
-
-    if (deletedTask.length === 0) {
+    if (!taskToDelete.length) {
       return NextResponse.json({
         success: false,
         error: '找不到指定的任務'
       }, { status: 404 });
     }
 
+    // 執行刪除
+    await query(`DELETE FROM Tasks WHERE id = @param0;`, [id]);
+
     return NextResponse.json({
       success: true,
-      data: deletedTask[0]
+      data: taskToDelete[0]
     });
   } catch (error) {
     console.error('刪除任務失敗:', error);

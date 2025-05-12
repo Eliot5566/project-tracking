@@ -28,11 +28,18 @@ export async function GET(request: Request) {
     }
 
     // 讀取檔案內容
+    // 使用 fsPromises 讀取檔案，這樣可以避免使用 fs.readFileSync 造成的阻塞問題,因為fs.readFileSync 是同步的 fs.readFile 是非同步的
+    // fsPromises.readFile 是 Promise 版本的 fs.readFile，這樣可以使用 async/await 語法
+    // 這裡的 fullPath 是從 public 資料夾開始的相對路徑
     const fileBuffer = await fsPromises.readFile(fullPath);
 
     // 設定 Content-Type (根據副檔名判斷)
+    // ext 用於取得副檔名，toLowerCase() 用於將副檔名轉為小寫，這樣可以避免大小寫問題
+    // path.extname(fullPath) 取得副檔名，toLowerCase() 將其轉為小寫 
     const ext = path.extname(fullPath).toLowerCase();
+    // 根據副檔名設定 Content-Type，預設為 application/octet-stream（一般二進位檔案） 
     let contentType = 'application/octet-stream';
+    // switch 用於根據副檔名設定不同的 Content-Type 
     switch (ext) {
       case '.pdf':
         contentType = 'application/pdf';

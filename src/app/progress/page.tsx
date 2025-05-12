@@ -257,8 +257,8 @@ const ProgressPage = () => {
       key: 'efficiency',
       render: (eff) => (
         <Space>
-          {(eff * 100).toFixed(0)}%
-          {eff <= 1 ? <UpOutlined style={{ color: 'green' }} /> : <DownOutlined style={{ color: 'red' }} />}
+          {eff != null ? `${eff.toFixed(1)}%` : '0%'}
+          {eff <= 100 ? <UpOutlined style={{ color: 'green' }} /> : <DownOutlined style={{ color: 'red' }} />}
         </Space>
       ),
     },
@@ -334,13 +334,24 @@ const ProgressPage = () => {
                   <Row gutter={16} style={{ marginBottom: 24 }}>
                     <Col xs={24} sm={12} md={8} lg={6}>
                       <Card>
-                        <Statistic
-                          title="專案完成率"
-                          value={performanceData.overallStats.projectCompletionRate}
-                          precision={1}
-                          suffix="%"
-                          valueStyle={{ color: performanceData.overallStats.projectCompletionRate > 80 ? '#3f8600' : '#cf1322' }}
-                        />
+                          <Statistic
+                            title="專案完成率"
+                            value={
+                              performanceData.overallStats.projectCompletionRate != null
+                                ? performanceData.overallStats.projectCompletionRate
+                                : '-'
+                            }
+                            precision={
+                              performanceData.overallStats.projectCompletionRate != null ? 1 : 0
+                            }
+                            suffix={performanceData.overallStats.projectCompletionRate != null ? '%' : ''}
+                            valueStyle={{
+                              color:
+                                performanceData.overallStats.projectCompletionRate != null && performanceData.overallStats.projectCompletionRate > 80
+                                  ? '#3f8600'
+                                  : '#cf1322'
+                            }}
+                          />
                       </Card>
                     </Col>
                     <Col xs={24} sm={12} md={8} lg={6}>

@@ -20,8 +20,8 @@ const features = [
     path: '/progress'
   },
   {
-    title: '團隊協作',
-    description: '促進團隊成員之間的溝通與協作，提升專案效率。',
+    title: '團隊管理',
+    description: '管理團隊成員資料。',
     icon: <TeamOutlined style={{ fontSize: 40 }} />,
     path: '/team'
   },

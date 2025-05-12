@@ -26,16 +26,16 @@ export async function GET() {
         tm.status,
         tm.email,
         COUNT(DISTINCT p.id) as projectCount,
-        COUNT(t.id) as taskCount,
+        COUNT(DISTINCT t.id) as taskCount,
         CASE 
-          WHEN COUNT(t.id) = 0 THEN 0
-          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100
+          WHEN COUNT(DISTINCT t.id) = 0 THEN 0
+          ELSE CAST(COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) AS FLOAT) / COUNT(DISTINCT t.id) * 100
         END as averageProgress,
         tm.createdAt,
         tm.updatedAt
       FROM TeamMembers tm
       LEFT JOIN Projects p ON tm.id = p.managerId
-      LEFT JOIN Tasks t ON tm.id = t.assigneeId
+      LEFT JOIN Tasks t ON tm.id = t.assignedTo
       GROUP BY tm.id, tm.name, tm.role, tm.department, tm.status, tm.email, tm.createdAt, tm.updatedAt
       ORDER BY tm.createdAt DESC
     `;
