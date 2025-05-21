@@ -1,3 +1,44 @@
+-- 使用者表（User）
+CREATE TABLE Users (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    name NVARCHAR(50) NOT NULL,
+    email NVARCHAR(100) NOT NULL UNIQUE,
+    password NVARCHAR(255) NOT NULL,
+    role NVARCHAR(50) NOT NULL,
+    department NVARCHAR(100),
+    createdAt DATETIME NOT NULL DEFAULT GETDATE(),
+    updatedAt DATETIME NOT NULL DEFAULT GETDATE()
+);
+
+-- 子任務表（Sub-task）
+CREATE TABLE SubTasks (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    taskId INT NOT NULL,
+    title NVARCHAR(200) NOT NULL,
+    description NVARCHAR(MAX),
+    status NVARCHAR(20) NOT NULL DEFAULT '待處理',
+    assigneeId INT,
+    startDate DATE,
+    dueDate DATE,
+    createdAt DATETIME NOT NULL DEFAULT GETDATE(),
+    updatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (taskId) REFERENCES Tasks(id),
+    FOREIGN KEY (assigneeId) REFERENCES Users(id)
+);
+
+-- 跨部門協作請求表（Request）
+CREATE TABLE Requests (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    taskId INT,
+    requesterId INT NOT NULL,
+    departmentRequested NVARCHAR(100) NOT NULL,
+    description NVARCHAR(MAX),
+    status NVARCHAR(20) NOT NULL DEFAULT 'requested',
+    createdAt DATETIME NOT NULL DEFAULT GETDATE(),
+    updatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (taskId) REFERENCES Tasks(id),
+    FOREIGN KEY (requesterId) REFERENCES Users(id)
+);
 -- 專案表
 CREATE TABLE Projects (
     id INT IDENTITY(1,1) PRIMARY KEY,

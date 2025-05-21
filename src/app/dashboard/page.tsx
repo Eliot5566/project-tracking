@@ -227,6 +227,7 @@ export default function DashboardPage() {
                   { value: 'week', label: '本週' },
                   { value: 'month', label: '本月' },
                   { value: 'quarter', label: '本季度' },
+
                 ]}
               />
               <DatePicker.RangePicker style={{ marginLeft: 16 }} />
