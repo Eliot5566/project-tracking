@@ -71,8 +71,8 @@ CREATE TABLE Tasks (
     progress INT NOT NULL DEFAULT 0,
     projectId INT NOT NULL,
     assignedTo INT NOT NULL,
-    startDate DATE,
-    endDate DATE,
+    startDate DATE,　-- 預計開始日期
+    endDate DATE, --預計結束日期
     createdAt DATETIME NOT NULL DEFAULT GETDATE(),
     updatedAt DATETIME NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY (projectId) REFERENCES Projects(id),
@@ -124,6 +124,7 @@ CREATE TABLE ProgressTracking (
     FOREIGN KEY (taskId) REFERENCES Tasks(id)
 );
 
+-- 文件管理表
 CREATE TABLE Documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fileName TEXT NOT NULL,
@@ -145,6 +146,7 @@ CREATE TABLE Documents (
     FOREIGN KEY (parentDocumentId) REFERENCES Documents(id)
 );
 
+-- 文件標籤表
 CREATE TABLE DocumentTags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -152,6 +154,8 @@ CREATE TABLE DocumentTags (
     createdAt TEXT NOT NULL
 );
 
+-- 文件標籤關聯表
+-- 用於將文件與標籤關聯
 CREATE TABLE DocumentTagAssociations (
     documentId INTEGER NOT NULL,
     tagId INTEGER NOT NULL,
@@ -161,6 +165,9 @@ CREATE TABLE DocumentTagAssociations (
     FOREIGN KEY (tagId) REFERENCES DocumentTags(id)
 );
 
+-- 文件評論表
+-- 用於存儲文件的評論
+-- 每個文件可以有多個評論
 CREATE TABLE DocumentComments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     documentId INTEGER NOT NULL,

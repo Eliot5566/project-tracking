@@ -34,12 +34,16 @@
 - **RWD 響應式設計**：支援桌機、平板、手機瀏覽。
 - **PDF 匯出**：支援中文字型嵌入，避免亂碼。
 
+
 ## 技術架構
 
 - **前端**：Next.js 14、React 18、Ant Design、react-big-calendar
-- **後端**：Next.js API Route、SQLite
-- **資料庫**：SQLite（可擴充至 MySQL/PostgreSQL）
+- **後端**：Next.js API Route、Node.js
+- **資料庫**：Microsoft SQL Server（MSSQL）
 - **其他**：TypeScript、ESLint、JWT、PDFKit
+
+> **注意：**
+> 本專案預設以 Microsoft SQL Server 為主要資料庫，若需支援 SQLite、MySQL、PostgreSQL，請參考 `src/lib/schema.sql` 並手動建立資料表。
 
 ## 安裝與啟動
 
@@ -101,6 +105,10 @@
 - **PDF 匯出亂碼**：請確認已嵌入中文字型。
 - **日曆事件顯示異常**：請確認事件 start/end 為 Date 物件。
 
+
+> **注意：**
+>1. `npm run init-db` 只適用於已安裝 Microsoft SQL Server 的環境。
+>2. 若您使用其他資料庫（如 SQLite、MySQL、PostgreSQL），請參考 `src/lib/schema.sql`，用對應資料庫工具手動建立資料表，或聯絡開發者取得相容腳本。
 
 ## 貢獻指南
 

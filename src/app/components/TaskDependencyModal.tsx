@@ -102,6 +102,8 @@ const TaskDependencyModal: React.FC<TaskDependencyModalProps> = ({ visible, task
     }
     
     try {
+      // 為甚麼要帶入 header? 因為這裡是用 fetch API 直接發送 POST 請求，並且需要告訴伺服器請求的內容類型是 JSON
+      // 這樣伺服器才能正確解析請求的內容
       const response = await fetch('/api/tasks/dependencies', {
         method: 'POST',
         headers: {
@@ -129,13 +131,17 @@ const TaskDependencyModal: React.FC<TaskDependencyModalProps> = ({ visible, task
     }
   };
 
-  // 刪除依賴關係
+  // 刪除依賴關係 
+  // 為甚麼不需要帶入 header? 因為這裡是用 fetch API 直接發送 DELETE 請求，並不需要額外的 header
+  // 因為 DELETE 請求本身就已經包含了要刪除的資源的 ID
+  // 伺服器會根據請求的 URL 中的 ID 來識別要刪除的資源  async(id: number) => { } async括弧後的id就是取得的id資源 
   const deleteDependency = async (id: number) => {
     try {
       const response = await fetch(`/api/tasks/dependencies?id=${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
       
+
       const result = await response.json();
       
       if (result.success) {
@@ -192,6 +198,10 @@ const TaskDependencyModal: React.FC<TaskDependencyModalProps> = ({ visible, task
                 // 如果 option.label 是 string，則可以直接使用 toLowerCase() 方法
                 // 否則需要使用 (option?.label ?? '').toLowerCase() 來避免 undefined 的情況
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                // 為甚麼.toLowCase() 被編譯器報錯? 因為這裡的 option 是 SelectProps['options'] 的類型
+                // 而 SelectProps['options'] 的類型是 { value: string | number; label: ReactNode }[]
+                // 這裡的 label 是 ReactNode 的類型，並不是 string 如果要調整的話
+                // 需要將 SelectProps['options'] 的類型改為 { value: string | number; label: string }[] 
               }
             />
             <Select
