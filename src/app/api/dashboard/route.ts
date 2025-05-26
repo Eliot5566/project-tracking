@@ -156,29 +156,33 @@ export async function GET() {
       color: taskStatusColorMap[t.category] || '#8884d8'
     }));
  
-    // 計算整體任務完成率
-    const overallCompletionRate = teamWorkload.length > 0
-      ? teamWorkload.reduce((sum, member) => sum + (member.completionRate || 0), 0) / teamWorkload.length
-      : 0;
- 
-    const dashboardData: DashboardData = {
+    // 直接用 SQL 查詢的 completionRate
+    // 兼容 mssql 回傳型別（IRecordSet 或 IResult）
+    // 兼容 mssql 回傳型別（IRecordSet 或 IResult）
+    const getFirst = (arr: any) => Array.isArray(arr) ? arr[0] : (arr && arr.recordset ? arr.recordset[0] : undefined);
+    const firstTaskStats = getFirst(taskStats) || {};
+    const firstProjectStats = getFirst(projectStats) || {};
+    const firstTeamStats = getFirst(teamStats) || {};
+    const sqlCompletionRate = firstTaskStats.completionRate || 0;
+
+    const dashboardData = {
       projectStats: {
-        totalProjects: projectStats[0]?.totalProjects || 0,
-        activeProjects: projectStats[0]?.activeProjects || 0,
-        completedProjects: projectStats[0]?.completedProjects || 0,
-        delayedProjects: projectStats[0]?.delayedProjects || 0,
+        totalProjects: firstProjectStats.totalProjects || 0,
+        activeProjects: firstProjectStats.activeProjects || 0,
+        completedProjects: firstProjectStats.completedProjects || 0,
+        delayedProjects: firstProjectStats.delayedProjects || 0,
       },
       taskStats: {
-        totalTasks: taskStats[0]?.totalTasks || 0,
-        completedTasks: taskStats[0]?.completedTasks || 0,
-        pendingTasks: taskStats[0]?.pendingTasks || 0,
-        overdueTasks: taskStats[0]?.overdueTasks || 0,
-        completionRate: overallCompletionRate,
+        totalTasks: firstTaskStats.totalTasks || 0,
+        completedTasks: firstTaskStats.completedTasks || 0,
+        pendingTasks: firstTaskStats.pendingTasks || 0,
+        overdueTasks: firstTaskStats.overdueTasks || 0,
+        completionRate: sqlCompletionRate,
       },
       teamStats: {
-        totalMembers: teamStats[0]?.totalMembers || 0,
-        activeMembers: teamStats[0]?.activeMembers || 0,
-        averageTaskCompletion: overallCompletionRate,
+        totalMembers: firstTeamStats.totalMembers || 0,
+        activeMembers: firstTeamStats.activeMembers || 0,
+        averageTaskCompletion: sqlCompletionRate,
       },
       recentProjects: recentProjects || [],
       recentTasks: recentTasks || [],

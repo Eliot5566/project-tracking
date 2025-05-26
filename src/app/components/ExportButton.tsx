@@ -84,11 +84,11 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       label: '匯出為 Excel',
       onClick: exportToExcel,
     },
-    {
-      key: 'pdf',
-      label: '匯出為 PDF',
-      onClick: exportToPDF,
-    },
+    // {
+    //   key: 'pdf',
+    //   label: '匯出為 PDF',
+    //   onClick: exportToPDF,
+    // },
   ];
 
   return (

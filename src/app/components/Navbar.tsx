@@ -69,11 +69,11 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       icon: <ProjectOutlined />,
       label: '文件管理'
     },
-    {
-      key: '/notifications',
-      icon: <BellOutlined />,
-      label: '通知'
-    }
+    // {
+    //   key: '/notifications',
+    //   icon: <BellOutlined />,
+    //   label: '通知'
+    // }
   ];
 
   return (
@@ -89,7 +89,7 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
           onClick={({ key }) => router.push(key)}
           style={{ flex: 1, color: darkMode ? '#ffffff' : '#000000' }}
         />
-        <Button
+        {/* <Button
           icon={<BulbOutlined />}
           onClick={() => setDarkMode(!darkMode)}
           style={{
@@ -100,7 +100,7 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
           }}
         >
           {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
-        </Button>
+        </Button> */}
       </div>
     </Header>
   );

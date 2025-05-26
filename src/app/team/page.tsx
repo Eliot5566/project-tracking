@@ -146,12 +146,12 @@ export default function TeamPage() {
           title={
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>團隊管理</span>
-              <Button
+              {/* <Button
                 icon={<BulbOutlined />}
                 onClick={() => setDarkMode(!darkMode)}
               >
                 {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
-              </Button>
+              </Button> */}
             </div>
           }
           extra={

@@ -101,25 +101,25 @@ export default function DashboardPage() {
         }
         const result = await response.json();
  
-        // 確保正確解析 completionRate
-        const fixedTaskStats = {
-          ...result.taskStats,
-          completionRate: result.taskStats.completionRate || 0,
-        };
- 
-        // 修復任務完成率顯示問題
-        const fixedTeamStats = {
-          ...result.teamStats,
-          averageTaskCompletion: result.taskStats.completionRate || 0,
-        };
- 
-        // 修復專案名稱顯示問題
+        // 修正專案名稱顯示問題
         const fixedProjectProgress = result.projectProgress.map(p => ({
           ...p,
           project: p.projectName || '未命名專案',
         }));
- 
-        setData({ ...result, teamStats: fixedTeamStats, projectProgress: fixedProjectProgress });
+
+        // 直接用 taskStats.completionRate 作為任務完成率
+        setData({
+          ...result,
+          teamStats: {
+            ...result.teamStats,
+            averageTaskCompletion: result.taskStats.completionRate || 0,
+          },
+          taskStats: {
+            ...result.taskStats,
+            completionRate: result.taskStats.completionRate || 0,
+          },
+          projectProgress: fixedProjectProgress
+        });
       } catch (error) {
         console.error('獲取儀表板數據失敗:', error);
       } finally {
