@@ -20,6 +20,8 @@ import {
 import { useState, useEffect } from 'react';
 import TaskForm from '../components/TaskForm';
 import TaskDependencyModal from '../components/TaskDependencyModal';
+import GanttChart from '../components/GanttChart';
+import { Task as GanttTask, ViewMode } from 'gantt-task-react';
 
 const { Title } = Typography;
 const { confirm } = Modal;
@@ -30,6 +32,7 @@ interface Task {
   description: string;
   status: string;
   priority: string;
+  startDate: string;
   dueDate: string;
   assignedTo: number;
   assignedToName: string;
@@ -45,10 +48,12 @@ interface TaskFormData {
   description: string;
   status: string;
   priority: string;
+  startDate: string;
   dueDate: string;
   assignedTo: number;
   projectId: number;
 }
+
 
 export default function TaskPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -56,28 +61,33 @@ export default function TaskPage() {
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
   const [loading, setLoading] = useState(false);
   const [dependencyModalVisible, setDependencyModalVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'gantt'>('list');
+  const [dependencies, setDependencies] = useState<any[]>([]); // 所有依賴關係
 
-  // 獲取任務列表
-  const fetchTasks = async () => {
+  // 同時獲取任務與依賴
+  const fetchTasksAndDependencies = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/tasks');
-      const result = await response.json();
-      if (result.success) {
-        setTasks(result.data);
-      } else {
-        message.error('獲取任務列表失敗');
-      }
+      const [tasksRes, depRes] = await Promise.all([
+        fetch('/api/tasks'),
+        fetch('/api/tasks/dependencies/all'),
+      ]);
+      const tasksJson = await tasksRes.json();
+      const depJson = await depRes.json();
+      if (tasksJson.success) setTasks(tasksJson.data);
+      else message.error('獲取任務列表失敗');
+      if (depJson.success) setDependencies(depJson.data);
+      else message.error('獲取依賴關係失敗');
     } catch (error) {
-      message.error('獲取任務列表失敗');
-      console.error('獲取任務列表失敗:', error);
+      message.error('獲取任務或依賴失敗');
+      console.error('獲取任務或依賴失敗:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchTasksAndDependencies();
   }, []);
 
   const handleOpenDialog = (task?: Task) => {
@@ -213,7 +223,39 @@ export default function TaskPage() {
     setDependencyModalVisible(true);
   };
 
+  // 建立依賴查詢 Map
+  const depByTaskId = new Map<number, {pre: any[]; post: any[]}>();
+  dependencies.forEach(dep => {
+    if (!depByTaskId.has(dep.taskId)) depByTaskId.set(dep.taskId, {pre: [], post: []});
+    if (!depByTaskId.has(dep.dependsOnTaskId)) depByTaskId.set(dep.dependsOnTaskId, {pre: [], post: []});
+    depByTaskId.get(dep.taskId)!.pre.push(dep); // 此任務的前置依賴
+    depByTaskId.get(dep.dependsOnTaskId)!.post.push(dep); // 被依賴
+  });
+
   const columns = [
+    {
+      title: '依賴',
+      key: 'dependencies',
+      render: (_: any, record: Task) => {
+        const pre = depByTaskId.get(record.id)?.pre || [];
+        const post = depByTaskId.get(record.id)?.post || [];
+        return (
+          <Space size="small">
+            {pre.length > 0 && (
+              <Tooltip title={pre.map(d => d.dependsOnTaskTitle).join(', ')}>
+                <Tag color="blue">前置:{pre.length}</Tag>
+              </Tooltip>
+            )}
+            {post.length > 0 && (
+              <Tooltip title={post.map(d => d.taskTitle).join(', ')}>
+                <Tag color="purple">後續:{post.length}</Tag>
+              </Tooltip>
+            )}
+            {pre.length === 0 && post.length === 0 && <Tag color="default">無</Tag>}
+          </Space>
+        );
+      },
+    },
     {
       title: '任務名稱',
       dataIndex: 'title',
@@ -255,6 +297,11 @@ export default function TaskPage() {
     //  render: (progress: number) => `${progress}%`,
     //},
     {
+      title: '開始日期',
+      dataIndex: 'startDate',
+      key: 'startDate',
+    },
+    {
       title: '截止日期',
       dataIndex: 'dueDate',
       key: 'dueDate',
@@ -290,8 +337,31 @@ export default function TaskPage() {
     },
   ];
 
+  // 將任務轉換為 Gantt chart 格式，帶入 dependencies
+  const ganttTasks: GanttTask[] = tasks.map((task) => {
+    // 找出此任務的所有前置依賴（dependsOnTaskId）
+    const pre = dependencies.filter(dep => dep.taskId === task.id);
+    return {
+      id: String(task.id),
+      name: task.title,
+      start: new Date(task.startDate),
+      end: new Date(task.dueDate),
+      progress: task.progress || 0,
+      type: 'task',
+      project: String(task.projectId),
+      styles: {
+        backgroundColor: task.status === 'completed' ? '#52c41a' : (task.status === 'in_progress' ? '#1890ff' : '#faad14'),
+        progressColor: '#1890ff',
+      },
+      dependencies: pre.map(dep => String(dep.dependsOnTaskId)),
+      isDisabled: false,
+      hideChildren: false,
+      displayOrder: task.id,
+    };
+  });
+
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem' }}>
+    <div style={{ maxWidth: 1600, margin: '0 auto', padding: '2rem' }}>
       <Card>
         <div style={{ 
           display: 'flex', 
@@ -302,21 +372,39 @@ export default function TaskPage() {
           <Title level={3} style={{ margin: 0 }}>
             任務管理
           </Title>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleOpenDialog()}
-          >
-            新增任務
-          </Button>
+          <Space>
+            <Button
+              type={viewMode === 'list' ? 'primary' : 'default'}
+              onClick={() => setViewMode('list')}
+            >
+              列表視圖
+            </Button>
+            <Button
+              type={viewMode === 'gantt' ? 'primary' : 'default'}
+              onClick={() => setViewMode('gantt')}
+            >
+              甘特圖視圖
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleOpenDialog()}
+            >
+              新增任務
+            </Button>
+          </Space>
         </div>
 
-        <Table
-          columns={columns}
-          dataSource={tasks}
-          rowKey="id"
-          loading={loading}
-        />
+        {viewMode === 'list' ? (
+          <Table
+            columns={columns}
+            dataSource={tasks}
+            rowKey="id"
+            loading={loading}
+          />
+        ) : (
+          <GanttChart tasks={ganttTasks} />
+        )}
 
         <TaskForm
           open={openDialog}
@@ -334,3 +422,4 @@ export default function TaskPage() {
     </div>
   );
 }
+//       onOk={handleCreateMember}

@@ -24,6 +24,7 @@ interface Task {
   description: string;
   status: string;
   priority: string;
+  startDate: string;
   dueDate: string;
   assignedTo: number;
   assignedToName: string;
@@ -39,6 +40,7 @@ interface TaskFormData {
   description: string;
   status: string;
   priority: string;
+  startDate: string;
   dueDate: string;
   assignedTo: number;
   projectId: number;
@@ -112,7 +114,8 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
     if (open && initialData) {
       form.setFieldsValue({
         ...initialData,
-        dueDate: dayjs(initialData.dueDate),
+        startDate: initialData.startDate ? dayjs(initialData.startDate) : undefined,
+        dueDate: initialData.dueDate ? dayjs(initialData.dueDate) : undefined,
       });
     } else {
       form.resetFields();
@@ -123,7 +126,8 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
     try {
       const taskData = {
         ...values,
-        dueDate: values.dueDate.format('YYYY-MM-DD'),
+        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
+        dueDate: values.dueDate ? values.dueDate.format('YYYY-MM-DD') : undefined,
         progress: values.status === 'completed' ? 100 : values.progress || 0,
         ...(initialData?.id ? { id: initialData.id } : {})
       };
@@ -214,6 +218,13 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
           </Select>
         </Form.Item>
 
+        <Form.Item
+          name="startDate"
+          label="開始日期"
+          rules={[{ required: true, message: '請選擇開始日期' }]}
+        >
+          <DatePicker style={{ width: '100%' }} />
+        </Form.Item>
         <Form.Item
           name="dueDate"
           label="截止日期"

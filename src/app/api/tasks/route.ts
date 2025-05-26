@@ -10,6 +10,7 @@ interface Task {
   assignedTo: number;
   status: string;
   priority: string;
+  startDate: string;
   dueDate: string;
   progress: number;
   createdAt: string;
@@ -95,15 +96,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, description, projectId, assignedTo, status, priority, dueDate } = body;
+    const { title, description, projectId, assignedTo, status, priority, startDate, dueDate } = body;
 
     const sqlQuery = `
       INSERT INTO Tasks (
-        title, description, projectId, assignedTo, status, priority, dueDate,
+        title, description, projectId, assignedTo, status, priority, startDate, dueDate,
         createdAt, updatedAt
       )
       VALUES (
-        @param0, @param1, @param2, @param3, @param4, @param5, @param6,
+        @param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7,
         GETDATE(), GETDATE()
       );
       
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
       assignedTo,
       status,
       priority,
+      startDate,
       dueDate
     ]);
 
@@ -146,7 +148,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, title, description, projectId, assignedTo, status, priority, dueDate, progress } = body;
+    const { id, title, description, projectId, assignedTo, status, priority, startDate, dueDate, progress } = body;
 
     // 如果任務狀態為已完成，自動設置進度為 100
     const finalProgress = status === 'completed' ? 100 : progress || 0;
@@ -160,10 +162,11 @@ export async function PUT(request: Request) {
         assignedTo = @param3,
         status = @param4,
         priority = @param5,
-        dueDate = @param6,
-        progress = @param7,
+        startDate = @param6,
+        dueDate = @param7,
+        progress = @param8,
         updatedAt = GETDATE()
-      WHERE id = @param8;
+      WHERE id = @param9;
       
       SELECT 
         t.id,
@@ -173,6 +176,7 @@ export async function PUT(request: Request) {
         t.assignedTo,
         t.status,
         t.priority,
+        t.startDate,
         t.dueDate,
         t.progress,
         t.createdAt,
@@ -182,7 +186,7 @@ export async function PUT(request: Request) {
       FROM Tasks t
       LEFT JOIN Projects p ON t.projectId = p.id
       LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id
-      WHERE t.id = @param8;
+      WHERE t.id = @param9;
     `;
 
     const updatedTask = await query<Task[]>(sqlQuery, [
@@ -192,6 +196,7 @@ export async function PUT(request: Request) {
       assignedTo,
       status,
       priority,
+      startDate,
       dueDate,
       finalProgress,
       id

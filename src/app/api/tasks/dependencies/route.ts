@@ -10,12 +10,27 @@ interface TaskDependency {
   createdAt: string;
 }
 
-// 獲取任務依賴關係
+// 獲取任務依賴關係（單一或全部）
 export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const taskId = searchParams.get('taskId');
+  const { pathname, searchParams } = new URL(req.url);
+  // /api/tasks/dependencies/all
+  if (pathname.endsWith('/all')) {
+    try {
+      const all = await query<any[]>(
+        `SELECT td.*, t1.title AS taskTitle, t2.title AS dependsOnTaskTitle
+         FROM TaskDependencies td
+         JOIN Tasks t1 ON td.taskId = t1.id
+         JOIN Tasks t2 ON td.dependsOnTaskId = t2.id`
+      );
+      return NextResponse.json({ success: true, data: all });
+    } catch (error) {
+      console.error('獲取所有依賴關係錯誤:', error);
+      return NextResponse.json({ success: false, error: '獲取所有依賴關係失敗' }, { status: 500 });
+    }
+  }
 
+  try {
+    const taskId = searchParams.get('taskId');
     if (!taskId) {
       return NextResponse.json({
         success: false,
