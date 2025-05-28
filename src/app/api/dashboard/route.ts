@@ -5,6 +5,18 @@ export const dynamic = 'force-dynamic'; // 確保不緩存API響應
  
 export async function GET() {
   try {
+    // taskStatsQuery          用來獲取任務統計數據
+    // projectStatsQuery       用來獲取專案統計數據
+    // teamStatsQuery          用來獲取團隊成員統計數據
+    // recentProjectsQuery     用來獲取最近的專案
+    // recentTasksQuery        用來獲取最近的任務
+    // projectProgressQuery    用來獲取專案進度
+    // taskDistributionQuery   用來獲取任務分佈
+    // upcomingDeadlinesQuery  用來獲取即將到期的任務
+    // weeklyProgressQuery     用來獲取每週進度
+    // teamWorkloadQuery       用來獲取團隊工作負載
+    // recentActivitiesQuery   用來獲取最近活動
+
     const taskStatsQuery = `
       SELECT
         COUNT(*) AS totalTasks,

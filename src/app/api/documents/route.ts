@@ -39,6 +39,11 @@ export async function DELETE(request) {
       );
     }
 
+    // 專案名稱  --- 開始日期  --- 結束日期
+    // 任務名稱  --- 任務描述  --- 任務狀態  --- 優先級(低/中/高) --- 開始日期 --- 結束日期  --- 負責人
+    // 任務名稱  --- 任務描述  --- 任務狀態  --- 優先級(低/中/高) --- 開始日期 --- 結束日期  --- 負責人
+    // 任務名稱  --- 任務描述  --- 任務狀態  --- 優先級(低/中/高) --- 開始日期 --- 結束日期  --- 負責人
+
     const document = await query(`SELECT * FROM Documents WHERE id = ?`, [id]);
 
     if (!document.length) {
