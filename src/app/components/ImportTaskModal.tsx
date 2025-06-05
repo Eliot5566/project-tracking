@@ -58,7 +58,9 @@ const ImportTaskModal: React.FC<ImportTaskModalProps> = ({ open, onClose, onSucc
         </Upload.Dragger>
         <div style={{ marginTop: 16, color: '#888' }}>
           請下載範例檔案，依格式填寫後上傳。<br />
-          <a href="/uploads/general/import_sample.xlsx" download>下載 Excel 範例</a>
+          <a href="/uploads/general/import_sample.xlsx" download style={{
+             color: '#1890ff', fontSize: 20, textDecoration: 'underline', cursor: 'pointer', opacity: 0.8    
+           }}>下載 Excel 範例</a>
         </div>
       </Spin>
     </Modal>
@@ -66,3 +68,4 @@ const ImportTaskModal: React.FC<ImportTaskModalProps> = ({ open, onClose, onSucc
 };
 
 export default ImportTaskModal;
+
