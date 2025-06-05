@@ -4,6 +4,16 @@ import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
 
+
+/**
+ * 下載文件 API
+ * 
+ * 根據 filePath 參數下載指定的文件
+ * 
+ * @param request - 包含 filePath 參數的請求
+ * @returns 返回文件內容或錯誤信息
+ */
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,6 +25,7 @@ export async function GET(request: Request) {
       );
     }
 
+    
     // 如果 filePath 開頭有 "/" 則保留，但在拼接時需移除
     const relativePath = filePath.replace(/^\/+/, '');
     const fullPath = path.join(process.cwd(), 'public', relativePath);
@@ -83,6 +94,7 @@ export async function GET(request: Request) {
     console.error('下載文件失敗:', error);
     return NextResponse.json(
       { success: false, error: '下載文件失敗: ' + (error instanceof Error ? error.message : '未知錯誤') },
+      
       { status: 500 }
     );
   }

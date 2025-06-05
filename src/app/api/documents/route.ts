@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
+import { ConsoleSqlOutlined } from '@ant-design/icons';
 
 // 取得文件列表
 export async function GET(request) {
@@ -63,6 +64,7 @@ export async function DELETE(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('刪除文件失敗:', error);
+    // 如果刪除文件失敗，返回錯誤信息 NexrResopnse是 Next.js 中的響應對象 用於構建 HTTP 響應
     return NextResponse.json(
       { success: false, error: '刪除文件失敗' },
       { status: 500 }

@@ -69,6 +69,11 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       icon: <ProjectOutlined />,
       label: '文件管理'
     },
+    {
+      key: '/audit',
+      icon: <TeamOutlined />,
+      label: '稽核專區',
+    }
     // {
     //   key: '/notifications',
     //   icon: <BellOutlined />,

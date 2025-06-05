@@ -21,6 +21,7 @@ import { useState, useEffect } from 'react';
 import TaskForm from '../components/TaskForm';
 import TaskDependencyModal from '../components/TaskDependencyModal';
 import GanttChart from '../components/GanttChart';
+import ImportTaskModal from '../components/ImportTaskModal';
 import { Task as GanttTask, ViewMode } from 'gantt-task-react';
 
 const { Title } = Typography;
@@ -63,6 +64,7 @@ export default function TaskPage() {
   const [dependencyModalVisible, setDependencyModalVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'gantt'>('list');
   const [dependencies, setDependencies] = useState<any[]>([]); // 所有依賴關係
+  const [importModalVisible, setImportModalVisible] = useState(false);
 
   // 同時獲取任務與依賴
   const fetchTasksAndDependencies = async () => {
@@ -300,11 +302,19 @@ export default function TaskPage() {
       title: '開始日期',
       dataIndex: 'startDate',
       key: 'startDate',
+      render: (date: string) => {
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      },
     },
     {
       title: '截止日期',
       dataIndex: 'dueDate',
       key: 'dueDate',
+      render: (date: string) => {
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      },
     },
     {
       title: '負責人',
@@ -369,10 +379,22 @@ export default function TaskPage() {
           alignItems: 'center',
           marginBottom: '1rem' 
         }}>
+
           <Title level={3} style={{ margin: 0 }}>
             任務管理
           </Title>
           <Space>
+            <Button
+              type="default"
+              onClick={() => setImportModalVisible(true)}
+            >
+              批次匯入
+            </Button>
+        <ImportTaskModal
+          open={importModalVisible}
+          onClose={() => setImportModalVisible(false)}
+          onSuccess={fetchTasksAndDependencies}
+        />
             <Button
               type={viewMode === 'list' ? 'primary' : 'default'}
               onClick={() => setViewMode('list')}

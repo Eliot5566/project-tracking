@@ -31,6 +31,7 @@ const features = [
     icon: <FileOutlined style={{ fontSize: 40 }} />,
     path: '/documents'
   },
+
 ];
 
 export default function Home() {
