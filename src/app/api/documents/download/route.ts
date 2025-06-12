@@ -14,10 +14,13 @@ import path from 'path';
  * @returns 返回文件內容或錯誤信息
  */
 
+import { query } from '@/lib/db';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     let filePath = searchParams.get('filePath');
+    const password = searchParams.get('password') || '';
     if (!filePath) {
       return NextResponse.json(
         { success: false, error: '缺少 filePath 參數' },
@@ -25,7 +28,21 @@ export async function GET(request: Request) {
       );
     }
 
-    
+    // 查詢文件密碼 hash
+    const docs = await query('SELECT passwordHash FROM Documents WHERE filePath = @param0', [filePath]);
+    if (!docs.length) {
+      return NextResponse.json({ success: false, error: '文件不存在' }, { status: 404 });
+    }
+    const passwordHashDb = docs[0].passwordHash || '';
+    if (passwordHashDb) {
+      // 有設密碼，需驗證
+      const crypto = await import('crypto');
+      const inputHash = crypto.createHash('sha256').update(password).digest('hex');
+      if (inputHash !== passwordHashDb) {
+        return NextResponse.json({ success: false, error: '密碼錯誤，無法下載' }, { status: 403 });
+      }
+    }
+
     // 如果 filePath 開頭有 "/" 則保留，但在拼接時需移除
     const relativePath = filePath.replace(/^\/+/, '');
     const fullPath = path.join(process.cwd(), 'public', relativePath);
@@ -39,18 +56,11 @@ export async function GET(request: Request) {
     }
 
     // 讀取檔案內容
-    // 使用 fsPromises 讀取檔案，這樣可以避免使用 fs.readFileSync 造成的阻塞問題,因為fs.readFileSync 是同步的 fs.readFile 是非同步的
-    // fsPromises.readFile 是 Promise 版本的 fs.readFile，這樣可以使用 async/await 語法
-    // 這裡的 fullPath 是從 public 資料夾開始的相對路徑
     const fileBuffer = await fsPromises.readFile(fullPath);
 
     // 設定 Content-Type (根據副檔名判斷)
-    // ext 用於取得副檔名，toLowerCase() 用於將副檔名轉為小寫，這樣可以避免大小寫問題
-    // path.extname(fullPath) 取得副檔名，toLowerCase() 將其轉為小寫 
     const ext = path.extname(fullPath).toLowerCase();
-    // 根據副檔名設定 Content-Type，預設為 application/octet-stream（一般二進位檔案） 
     let contentType = 'application/octet-stream';
-    // switch 用於根據副檔名設定不同的 Content-Type 
     switch (ext) {
       case '.pdf':
         contentType = 'application/pdf';
@@ -77,13 +87,10 @@ export async function GET(request: Request) {
       case '.pptx':
         contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
         break;
-      // 可依需要增加其他格式
     }
 
-    // 回傳檔案內容，設定好下載檔名（支援中文與特殊字元）
     const baseName = path.basename(fullPath);
     const encodedName = encodeURIComponent(baseName);
-    // 只設置 filename*，避免 ByteString 錯誤
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
@@ -94,7 +101,6 @@ export async function GET(request: Request) {
     console.error('下載文件失敗:', error);
     return NextResponse.json(
       { success: false, error: '下載文件失敗: ' + (error instanceof Error ? error.message : '未知錯誤') },
-      
       { status: 500 }
     );
   }

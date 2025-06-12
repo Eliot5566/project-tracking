@@ -84,6 +84,7 @@ export default function DocumentsPage() {
 
       formData.append('file', fileObj);
       formData.append('description', values.description || '');
+      formData.append('password', values.password || '');
 
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
@@ -106,14 +107,33 @@ export default function DocumentsPage() {
   };
 
   // 下載功能：呼叫後端下載 API，並以 Blob 建立 object URL 供瀏覽器下載
+  // 下載功能：需輸入密碼
   const handleDownload = async (filePath: string) => {
+    let password = '';
+    await new Promise((resolve) => {
+      Modal.confirm({
+        title: '下載驗證',
+        content: (
+          <Input.Password
+            placeholder="請輸入文件密碼"
+            onChange={e => (password = e.target.value)}
+            onPressEnter={() => { Modal.destroyAll(); resolve(null); }}
+          />
+        ),
+        onOk: () => resolve(null),
+        onCancel: () => resolve(null),
+        okText: '確定',
+        cancelText: '取消',
+      });
+    });
+    if (!password) return;
     try {
-      // 這裡使用 encodeURIComponent 處理 filePath 字串
       const response = await fetch(
-        `/api/documents/download?filePath=${encodeURIComponent(filePath)}`
+        `/api/documents/download?filePath=${encodeURIComponent(filePath)}&password=${encodeURIComponent(password)}`
       );
       if (!response.ok) {
-        message.error('下載失敗');
+        const res = await response.json().catch(() => ({}));
+        message.error(res.error || '下載失敗');
         return;
       }
       const blob = await response.blob();
@@ -322,6 +342,14 @@ export default function DocumentsPage() {
 
           <Form.Item name="description" label="文件描述">
             <Input.TextArea rows={4} />
+          </Form.Item>
+
+          <Form.Item
+            name="password"
+            label="下載密碼"
+            rules={[{ required: true, message: '請輸入下載密碼' }]}
+          >
+            <Input.Password placeholder="請輸入密碼，下載/歷史版本需驗證" />
           </Form.Item>
 
           <Form.Item>

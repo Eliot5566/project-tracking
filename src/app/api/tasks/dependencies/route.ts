@@ -77,6 +77,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { taskId, dependsOnTaskId, type } = body;
+    
 
     if (!taskId || !dependsOnTaskId || !type) {
       return NextResponse.json({
@@ -93,6 +94,7 @@ export async function POST(req: Request) {
     );
 
     if (existingDependency.length > 0) {
+
       return NextResponse.json({
         success: false,
         error: '該依賴關係已存在'
@@ -161,6 +163,12 @@ export async function DELETE(req: Request) {
 
 // 檢查添加新依賴是否會造成循環依賴
 async function checkForCyclicDependency(taskId: string | number, dependsOnTaskId: string | number): Promise<boolean> {
+  // 使用深度優先搜索 (DFS) 檢查循環依賴
+  // 如果當前任務 ID 等於依賴的任務 ID，則表示存在循環 DFS具體實現如下：
+  // 如果已經訪問過當前任務 ID，則表示沒有循環
+
+  // 使用 Set 來記錄已訪問的任務 ID 
+  // visited用於避免重複訪問 
   const visited = new Set<string | number>();
   
   async function dfs(currentTaskId: string | number): Promise<boolean> {

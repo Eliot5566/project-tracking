@@ -19,9 +19,12 @@ export async function POST(request: Request) {
     await ensureDirectoryExists(uploadDir);
 
     // 2. 解析前端傳來的 FormData
+
     const formData = await request.formData();
     const file = formData.get('file');
     const description = formData.get('description')?.toString() || '';
+    // 新增密碼欄位
+    const password = formData.get('password')?.toString() || '';
 
     // 可選：讀取 projectId 與 taskId（如果有傳）
     const projectId = formData.get('projectId') ? Number(formData.get('projectId')) : null;
@@ -57,7 +60,12 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     await writeFile(fullPath, Buffer.from(arrayBuffer));
 
-    // 7. 組成 SQL 查詢與參數陣列，改用 @param0, @param1, ...
+
+    // 7. 密碼 hash 儲存（簡單範例，實際應用請用 bcrypt 等）
+    const crypto = await import('crypto');
+    const passwordHash = password ? crypto.createHash('sha256').update(password).digest('hex') : '';
+
+    // 8. 組成 SQL 查詢與參數陣列，新增 passwordHash 欄位
     const sql = `
       INSERT INTO Documents (
         fileName,
@@ -72,6 +80,7 @@ export async function POST(request: Request) {
         isLatestVersion,
         parentDocumentId,
         versionNumber,
+        passwordHash,
         createdAt,
         updatedAt
       )
@@ -80,6 +89,7 @@ export async function POST(request: Request) {
         1,    -- isLatestVersion: 1 表示最新版本
         @param9, -- parentDocumentId
         @param10, -- versionNumber
+        @param11, -- passwordHash
         GETDATE(),
         GETDATE()
       )
@@ -95,7 +105,8 @@ export async function POST(request: Request) {
       projectId,
       taskId,
       parentDocumentId,
-      versionNumber
+      versionNumber,
+      passwordHash
     ];
 
     // 8. 執行 SQL 查詢

@@ -235,6 +235,26 @@ export async function DELETE(request: Request) {
       }, { status: 400 });
     }
 
+  export async function DELETE(request: Request){
+    try{
+      const { searchParams } = new URL(request.url);
+      const id = searchParams.get('id');
+
+      if(!id){
+        return NextResponse.json({
+          sucess: false,
+          error: '沒有任務ID'
+        },
+      {status:400});
+      }
+    }
+    const taskToDelete = await query<Task[]>(`
+      SELCT t.*,p.name as projectName , tm.name as assignedToName
+      FROM Tasks t
+      LEFT JOIN Projoecys p ON t.projectId = P.id 
+      LEFT JOIN TeamMe`)
+  }
+
     // 先查詢要刪除的任務
     const taskToDelete = await query<Task[]>(`
       SELECT t.*, p.name as projectName, tm.name as assignedToName

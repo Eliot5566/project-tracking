@@ -131,7 +131,19 @@ export default function TeamPage() {
       title: '加入時間',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => {
+        if (!date) return '';
+        // MSSQL 格式 yyyy-MM-dd HH:mm:ss.fff 取到秒並轉為 yyyy/MM/dd HH:mm:ss
+        const mssql = date.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
+        if (mssql) return mssql[0].replace(/-/g, '/');
+        // ISO 格式 2025-06-12T11:10:45.800Z 取前19字元並轉為 yyyy/MM/dd HH:mm:ss
+        if (date.length >= 19 && date[10] === 'T') {
+          const d = date.slice(0, 10).replace(/-/g, '/');
+          const t = date.slice(11, 19);
+          return `${d} ${t}`;
+        }
+        return date;
+      },
     },
   ];
 
