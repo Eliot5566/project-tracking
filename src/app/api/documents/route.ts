@@ -32,6 +32,7 @@ export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const password = searchParams.get('password') || '';
 
     if (!id) {
       return NextResponse.json(
@@ -40,13 +41,7 @@ export async function DELETE(request) {
       );
     }
 
-    // 專案名稱  --- 開始日期  --- 結束日期
-    // 任務名稱  --- 任務描述  --- 任務狀態  --- 優先級(低/中/高) --- 開始日期 --- 結束日期  --- 負責人
-    // 任務名稱  --- 任務描述  --- 任務狀態  --- 優先級(低/中/高) --- 開始日期 --- 結束日期  --- 負責人
-    // 任務名稱  --- 任務描述  --- 任務狀態  --- 優先級(低/中/高) --- 開始日期 --- 結束日期  --- 負責人
-
-    const document = await query(`SELECT * FROM Documents WHERE id = ?`, [id]);
-
+    const document = await query(`SELECT * FROM Documents WHERE id = @param0`, [id]);
     if (!document.length) {
       return NextResponse.json(
         { success: false, error: '文件不存在' },
@@ -54,17 +49,29 @@ export async function DELETE(request) {
       );
     }
 
+    // 密碼驗證
+    const passwordHashDb = document[0].passwordHash || '';
+    if (passwordHashDb) {
+      const crypto = await import('crypto');
+      const inputHash = crypto.createHash('sha256').update(password).digest('hex');
+      if (inputHash !== passwordHashDb) {
+        return NextResponse.json({ success: false, error: '密碼錯誤，無法刪除' }, { status: 403 });
+      }
+    } else {
+      // 沒有密碼不允許刪除
+      return NextResponse.json({ success: false, error: '此文件未設置密碼，無法刪除' }, { status: 403 });
+    }
+
     const filePath = document[0].filePath;
     if (fs.existsSync(path.join(process.cwd(), 'public', filePath))) {
       fs.unlinkSync(path.join(process.cwd(), 'public', filePath));
     }
 
-    await query(`DELETE FROM Documents WHERE id = ?`, [id]);
+    await query(`DELETE FROM Documents WHERE id = @param0`, [id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('刪除文件失敗:', error);
-    // 如果刪除文件失敗，返回錯誤信息 NexrResopnse是 Next.js 中的響應對象 用於構建 HTTP 響應
     return NextResponse.json(
       { success: false, error: '刪除文件失敗' },
       { status: 500 }

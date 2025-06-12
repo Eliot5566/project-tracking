@@ -211,10 +211,49 @@ export default function DocumentsPage() {
           <Button icon={<HistoryOutlined />} onClick={() => showHistory(record)}>
             歷史版本
           </Button>
+          <Button danger onClick={() => handleDelete(record)}>
+            刪除
+          </Button>
         </Space>
       ),
     },
   ];
+
+  // 刪除功能：需輸入密碼
+  const handleDelete = (record: Document) => {
+    let password = '';
+    Modal.confirm({
+      title: '刪除驗證',
+      content: (
+        <Input.Password
+          placeholder="請輸入文件密碼"
+          onChange={e => (password = e.target.value)}
+          onPressEnter={() => { Modal.destroyAll(); doDelete(); }}
+        />
+      ),
+      onOk: () => doDelete(),
+      onCancel: () => {},
+      okText: '確定',
+      cancelText: '取消',
+    });
+    async function doDelete() {
+      if (!password) return;
+      try {
+        const res = await fetch(`/api/documents?id=${record.id}&password=${encodeURIComponent(password)}`, {
+          method: 'DELETE',
+        });
+        const result = await res.json();
+        if (result.success) {
+          message.success('刪除成功');
+          fetchDocuments();
+        } else {
+          message.error(result.error || '刪除失敗');
+        }
+      } catch (error) {
+        message.error('刪除失敗');
+      }
+    }
+  };
 
   // 歷史版本 Modal 內容
   const [uploadingVersion, setUploadingVersion] = useState(false);

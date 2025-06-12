@@ -42,9 +42,10 @@ next-env.d.ts
 
 .env.local
 
-# 忽略 上傳的檔案public/uploads
-/uploads/*
-/public/uploads/*
+
+# 忽略上傳的檔案（只忽略 public/uploads 下的所有內容，但保留資料夾結構）
+public/uploads/*
+!public/uploads/.gitkeep
 
 # 忽略 lib下的檔案
 /src/lib/*
