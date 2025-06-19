@@ -352,8 +352,8 @@ export default function TaskPage() {
     // 找出此任務的所有前置依賴（dependsOnTaskId）
     const pre = dependencies.filter(dep => dep.taskId === task.id);
     return {
-      id: String(task.id),
-      name: task.title,
+    id: String(task.id),
+    name: `${task.projectName} - ${task.title}`,
       start: new Date(task.startDate),
       end: new Date(task.dueDate),
       progress: task.progress || 0,

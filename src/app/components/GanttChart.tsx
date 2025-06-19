@@ -48,7 +48,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, projectId }) => {
           onProgressChange={(task: Task) => console.log("Progress change", task)}
           onDoubleClick={(task: Task) => console.log("Double click", task)}
           onClick={(task: Task) => console.log("Click", task)}
-          listCellWidth="150px"
+          listCellWidth="200px" // 設定任務列表的寬度，讓名稱完整顯示
           columnWidth={60}
           locale="zh-TW"
         />
