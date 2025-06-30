@@ -1,23 +1,37 @@
-"use client";
+'use client';
 
-import { 
-  Table, 
-  Button, 
-  Space, 
-  Tag, 
-  Typography, 
+import {
+  Table,
+  Button,
+  Space,
+  Tag,
+  Typography,
   Card,
   message,
   Modal,
-  Tooltip
+  Tooltip,
+  Select,
+  Input,
 } from 'antd';
-import { 
-  PlusOutlined, 
-  EditOutlined, 
+const { Option } = Select;
+interface Project {
+  id: number;
+  name: string;
+}
+
+interface TeamMember {
+  id: number;
+  name: string;
+}
+
+import {
+  PlusOutlined,
+  EditOutlined,
   DeleteOutlined,
-  NodeIndexOutlined
+  NodeIndexOutlined,
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import TaskForm from '../components/TaskForm';
 import TaskDependencyModal from '../components/TaskDependencyModal';
 import GanttChart from '../components/GanttChart';
@@ -55,8 +69,16 @@ interface TaskFormData {
   projectId: number;
 }
 
-
 export default function TaskPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
@@ -66,12 +88,42 @@ export default function TaskPage() {
   const [dependencies, setDependencies] = useState<any[]>([]); // 所有依賴關係
   const [importModalVisible, setImportModalVisible] = useState(false);
 
-  // 同時獲取任務與依賴
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
+  const [search, setSearch] = useState('');
+
+  // 取得專案與人員選項
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch('/api/projects');
+      const data = await res.json();
+      if (data.success) setProjects(data.data);
+    } catch {}
+  };
+  const fetchTeamMembers = async () => {
+    try {
+      const res = await fetch('/api/team');
+      const data = await res.json();
+      if (data.success) setTeamMembers(data.data);
+    } catch {}
+  };
+
+  // 同時獲取任務與依賴，支援篩選
   const fetchTasksAndDependencies = async () => {
     setLoading(true);
     try {
+      let url = '/api/tasks?';
+      const params: string[] = [];
+      if (selectedProjects.length > 0)
+        params.push(`projectId=${selectedProjects.join(',')}`);
+      if (selectedMembers.length > 0)
+        params.push(`assignedTo=${selectedMembers.join(',')}`);
+      if (search) params.push(`search=${encodeURIComponent(search)}`);
+      if (params.length > 0) url += params.join('&');
       const [tasksRes, depRes] = await Promise.all([
-        fetch('/api/tasks'),
+        fetch(url),
         fetch('/api/tasks/dependencies/all'),
       ]);
       const tasksJson = await tasksRes.json();
@@ -89,8 +141,13 @@ export default function TaskPage() {
   };
 
   useEffect(() => {
-    fetchTasksAndDependencies();
+    fetchProjects();
+    fetchTeamMembers();
   }, []);
+
+  useEffect(() => {
+    fetchTasksAndDependencies();
+  }, [selectedProjects, selectedMembers, search]);
 
   const handleOpenDialog = (task?: Task) => {
     setSelectedTask(task);
@@ -116,10 +173,10 @@ export default function TaskPage() {
           progress: 0,
         }),
       });
-      
+
       const result = await response.json();
       if (result.success) {
-        setTasks(prev => [...prev, result.data]);
+        setTasks((prev) => [...prev, result.data]);
         message.success('任務創建成功');
         handleCloseDialog();
       } else {
@@ -135,7 +192,7 @@ export default function TaskPage() {
 
   const handleUpdateTask = async (taskData: TaskFormData) => {
     if (!selectedTask) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch('/api/tasks', {
@@ -148,10 +205,12 @@ export default function TaskPage() {
           ...taskData,
         }),
       });
-      
+
       const result = await response.json();
       if (result.success) {
-        setTasks(prev => prev.map(t => t.id === selectedTask.id ? result.data : t));
+        setTasks((prev) =>
+          prev.map((t) => (t.id === selectedTask.id ? result.data : t))
+        );
         message.success('任務更新成功');
         handleCloseDialog();
       } else {
@@ -175,10 +234,10 @@ export default function TaskPage() {
           const response = await fetch(`/api/tasks?id=${taskId}`, {
             method: 'DELETE',
           });
-          
+
           const result = await response.json();
           if (result.success) {
-            setTasks(prev => prev.filter(t => t.id !== taskId));
+            setTasks((prev) => prev.filter((t) => t.id !== taskId));
             message.success('任務刪除成功');
           } else {
             message.error('刪除任務失敗');
@@ -226,15 +285,19 @@ export default function TaskPage() {
   };
 
   // 建立依賴查詢 Map
-  const depByTaskId = new Map<number, {pre: any[]; post: any[]}>();
-  dependencies.forEach(dep => {
-    if (!depByTaskId.has(dep.taskId)) depByTaskId.set(dep.taskId, {pre: [], post: []});
-    if (!depByTaskId.has(dep.dependsOnTaskId)) depByTaskId.set(dep.dependsOnTaskId, {pre: [], post: []});
+  const depByTaskId = new Map<number, { pre: any[]; post: any[] }>();
+  dependencies.forEach((dep) => {
+    if (!depByTaskId.has(dep.taskId))
+      depByTaskId.set(dep.taskId, { pre: [], post: [] });
+    if (!depByTaskId.has(dep.dependsOnTaskId))
+      depByTaskId.set(dep.dependsOnTaskId, { pre: [], post: [] });
     depByTaskId.get(dep.taskId)!.pre.push(dep); // 此任務的前置依賴
     depByTaskId.get(dep.dependsOnTaskId)!.post.push(dep); // 被依賴
   });
 
+  // 定義表格列
   const columns = [
+    // 依賴關係列
     {
       title: '依賴',
       key: 'dependencies',
@@ -244,16 +307,18 @@ export default function TaskPage() {
         return (
           <Space size="small">
             {pre.length > 0 && (
-              <Tooltip title={pre.map(d => d.dependsOnTaskTitle).join(', ')}>
+              <Tooltip title={pre.map((d) => d.dependsOnTaskTitle).join(', ')}>
                 <Tag color="blue">前置:{pre.length}</Tag>
               </Tooltip>
             )}
             {post.length > 0 && (
-              <Tooltip title={post.map(d => d.taskTitle).join(', ')}>
+              <Tooltip title={post.map((d) => d.taskTitle).join(', ')}>
                 <Tag color="purple">後續:{post.length}</Tag>
               </Tooltip>
             )}
-            {pre.length === 0 && post.length === 0 && <Tag color="default">無</Tag>}
+            {pre.length === 0 && post.length === 0 && (
+              <Tag color="default">無</Tag>
+            )}
           </Space>
         );
       },
@@ -274,9 +339,13 @@ export default function TaskPage() {
       key: 'status',
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>
-          {status === 'pending' ? '待處理' : 
-           status === 'in_progress' ? '進行中' : 
-           status === 'completed' ? '已完成' : status}
+          {status === 'pending'
+            ? '待處理'
+            : status === 'in_progress'
+            ? '進行中'
+            : status === 'completed'
+            ? '已完成'
+            : status}
         </Tag>
       ),
     },
@@ -286,9 +355,13 @@ export default function TaskPage() {
       key: 'priority',
       render: (priority: string) => (
         <Tag color={getPriorityColor(priority)}>
-          {priority === 'high' ? '高' : 
-           priority === 'medium' ? '中' : 
-           priority === 'low' ? '低' : priority}
+          {priority === 'high'
+            ? '高'
+            : priority === 'medium'
+            ? '中'
+            : priority === 'low'
+            ? '低'
+            : priority}
         </Tag>
       ),
     },
@@ -304,7 +377,13 @@ export default function TaskPage() {
       key: 'startDate',
       render: (date: string) => {
         const d = new Date(date);
-        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        return isNaN(d.getTime())
+          ? ''
+          : d.toLocaleDateString('zh-TW', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            });
       },
     },
     {
@@ -313,7 +392,13 @@ export default function TaskPage() {
       key: 'dueDate',
       render: (date: string) => {
         const d = new Date(date);
-        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        return isNaN(d.getTime())
+          ? ''
+          : d.toLocaleDateString('zh-TW', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            });
       },
     },
     {
@@ -326,20 +411,20 @@ export default function TaskPage() {
       key: 'action',
       render: (_: unknown, record: Task) => (
         <Space size="middle">
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
+          <Button
+            type="text"
+            icon={<EditOutlined />}
             onClick={() => handleOpenDialog(record)}
           />
-          <Button 
-            type="text" 
-            icon={<NodeIndexOutlined />} 
+          <Button
+            type="text"
+            icon={<NodeIndexOutlined />}
             onClick={() => handleDependencyManage(record)}
           />
-          <Button 
-            type="text" 
-            danger 
-            icon={<DeleteOutlined />} 
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
             onClick={() => handleDeleteTask(record.id)}
           />
         </Space>
@@ -350,20 +435,25 @@ export default function TaskPage() {
   // 將任務轉換為 Gantt chart 格式，帶入 dependencies
   const ganttTasks: GanttTask[] = tasks.map((task) => {
     // 找出此任務的所有前置依賴（dependsOnTaskId）
-    const pre = dependencies.filter(dep => dep.taskId === task.id);
+    const pre = dependencies.filter((dep) => dep.taskId === task.id);
     return {
-    id: String(task.id),
-    name: `${task.projectName} - ${task.title}`,
+      id: String(task.id),
+      name: `${task.projectName} - ${task.title}`,
       start: new Date(task.startDate),
       end: new Date(task.dueDate),
       progress: task.progress || 0,
       type: 'task',
       project: String(task.projectId),
       styles: {
-        backgroundColor: task.status === 'completed' ? '#52c41a' : (task.status === 'in_progress' ? '#1890ff' : '#faad14'),
+        backgroundColor:
+          task.status === 'completed'
+            ? '#52c41a'
+            : task.status === 'in_progress'
+            ? '#1890ff'
+            : '#faad14',
         progressColor: '#1890ff',
       },
-      dependencies: pre.map(dep => String(dep.dependsOnTaskId)),
+      dependencies: pre.map((dep) => String(dep.dependsOnTaskId)),
       isDisabled: false,
       hideChildren: false,
       displayOrder: task.id,
@@ -373,28 +463,26 @@ export default function TaskPage() {
   return (
     <div style={{ maxWidth: 1600, margin: '0 auto', padding: '2rem' }}>
       <Card>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '1rem' 
-        }}>
-
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1rem',
+          }}
+        >
           <Title level={3} style={{ margin: 0 }}>
             任務管理
           </Title>
           <Space>
-            <Button
-              type="default"
-              onClick={() => setImportModalVisible(true)}
-            >
+            <Button type="default" onClick={() => setImportModalVisible(true)}>
               批次匯入
             </Button>
-        <ImportTaskModal
-          open={importModalVisible}
-          onClose={() => setImportModalVisible(false)}
-          onSuccess={fetchTasksAndDependencies}
-        />
+            <ImportTaskModal
+              open={importModalVisible}
+              onClose={() => setImportModalVisible(false)}
+              onSuccess={fetchTasksAndDependencies}
+            />
             <Button
               type={viewMode === 'list' ? 'primary' : 'default'}
               onClick={() => setViewMode('list')}
@@ -416,6 +504,43 @@ export default function TaskPage() {
             </Button>
           </Space>
         </div>
+        {/* 篩選區塊 */}
+        <Space style={{ marginBottom: 16 }}>
+          <Select
+            mode="multiple"
+            allowClear
+            style={{ minWidth: 180 }}
+            placeholder="篩選專案"
+            value={selectedProjects}
+            onChange={setSelectedProjects}
+          >
+            {projects.map((project) => (
+              <Option key={project.id} value={project.id}>
+                {project.name}
+              </Option>
+            ))}
+          </Select>
+          <Select
+            mode="multiple"
+            allowClear
+            style={{ minWidth: 180 }}
+            placeholder="篩選負責人"
+            value={selectedMembers}
+            onChange={setSelectedMembers}
+          >
+            {teamMembers.map((member) => (
+              <Option key={member.id} value={member.id}>
+                {member.name}
+              </Option>
+            ))}
+          </Select>
+          <Input.Search
+            placeholder="搜尋任務標題/描述"
+            allowClear
+            onSearch={setSearch}
+            style={{ width: 220 }}
+          />
+        </Space>
 
         {viewMode === 'list' ? (
           <Table

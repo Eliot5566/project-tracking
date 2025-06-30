@@ -19,7 +19,10 @@ export async function GET() {
     const result = await query<AuditItem[]>(sql);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    return NextResponse.json({ success: false, error: '取得稽核清單失敗' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: '取得稽核清單失敗' },
+      { status: 500 }
+    );
   }
 }
 
@@ -28,14 +31,20 @@ export async function POST(request: NextRequest) {
   try {
     const { startDate, endDate, department, content } = await request.json();
     if (!startDate || !endDate || !department || !content) {
-      return NextResponse.json({ success: false, error: '缺少必要欄位' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: '缺少必要欄位' },
+        { status: 400 }
+      );
     }
     const sql = `INSERT INTO Audit (startDate, endDate, department, content, createdAt, updatedAt)
                  VALUES (@param0, @param1, @param2, @param3, GETDATE(), GETDATE())`;
     await query(sql, [startDate, endDate, department, content]);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ success: false, error: '新增稽核項目失敗' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: '新增稽核項目失敗' },
+      { status: 500 }
+    );
   }
 }
 
@@ -46,6 +55,9 @@ export async function GET_DEPARTMENTS() {
     const result = await query<{ department: string }[]>(sql);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    return NextResponse.json({ success: false, error: '取得部門清單失敗' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: '取得部門清單失敗' },
+      { status: 500 }
+    );
   }
 }

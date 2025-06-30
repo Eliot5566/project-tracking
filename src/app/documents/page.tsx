@@ -1,4 +1,6 @@
 "use client";
+import { useRouter } from 'next/navigation';
+
 
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Upload, Modal, Form, Input, message, Tag, Space } from 'antd';
@@ -24,6 +26,15 @@ interface Document {
 }
 
 export default function DocumentsPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);

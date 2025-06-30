@@ -1,7 +1,11 @@
 'use client';
 
-import { Layout, Menu, Button } from 'antd';
+import { Layout, Menu, Button, Dropdown, Space } from 'antd';
+import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import GlobalReminders from './GlobalReminders'; // 假設這是全域提醒組件的路徑
+
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -9,7 +13,7 @@ import {
   CalendarOutlined,
   BellOutlined,
   BarChartOutlined,
-  BulbOutlined
+  BulbOutlined,
 } from '@ant-design/icons';
 
 const { Header } = Layout;
@@ -27,27 +31,27 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: '首頁'
+      label: '首頁',
     },
     {
       key: '/projects',
       icon: <ProjectOutlined />,
-      label: '專案管理'
+      label: '專案管理',
     },
     {
       key: '/task',
       icon: <ProjectOutlined />,
-      label: '任務管理'
+      label: '任務管理',
     },
     {
       key: '/team',
       icon: <TeamOutlined />,
-      label: '團隊管理'
+      label: '團隊管理',
     },
     {
       key: '/calendar',
       icon: <CalendarOutlined />,
-      label: '行事曆'
+      label: '行事曆',
     },
     // {
     //   key: '/notifications',
@@ -57,23 +61,24 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
     {
       key: '/progress',
       icon: <BarChartOutlined />,
-      label: '進度追蹤'
+      label: '進度追蹤',
     },
     {
       key: '/dashboard',
       icon: <ProjectOutlined />,
-      label: '儀錶板'
+      label: '儀錶板',
     },
     {
       key: '/documents',
       icon: <ProjectOutlined />,
-      label: '文件管理'
+      label: '文件管理',
     },
     {
       key: '/audit',
       icon: <TeamOutlined />,
       label: '稽核專區',
-    }
+    },
+
     // {
     //   key: '/notifications',
     //   icon: <BellOutlined />,
@@ -81,10 +86,62 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
     // }
   ];
 
+  // 取得登入者資訊
+  const [user, setUser] = useState<{ name: string; position: string } | null>(
+    null
+  );
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const u = JSON.parse(userStr);
+          setUser({ name: u.name, position: u.position });
+        }
+      } catch {}
+    }
+  }, []);
+
+  // 登出
+  const handleLogout = () => {
+    localStorage.removeItem('isLogin');
+    localStorage.removeItem('user');
+    router.replace('/login');
+    window.location.reload();
+  };
+
+  const userMenu = (
+    <Menu>
+      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
+        登出
+      </Menu.Item>
+    </Menu>
+  );
+
   return (
-    <Header style={{ padding: 0, background: darkMode ? '#1f1f1f' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 24px' }}>
-        <div style={{ marginRight: '24px', fontSize: '18px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
+    <Header
+      style={{
+        padding: 0,
+        background: darkMode ? '#1f1f1f' : '#fff',
+        borderBottom: '1px solid #f0f0f0',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '100%',
+          padding: '0 24px',
+        }}
+      >
+        <div
+          style={{
+            marginRight: '24px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: darkMode ? '#ffffff' : '#000000',
+          }}
+        >
           專案追蹤系統
         </div>
         <Menu
@@ -94,18 +151,16 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
           onClick={({ key }) => router.push(key)}
           style={{ flex: 1, color: darkMode ? '#ffffff' : '#000000' }}
         />
-        {/* <Button
-          icon={<BulbOutlined />}
-          onClick={() => setDarkMode(!darkMode)}
-          style={{
-            backgroundColor: darkMode ? '#ffffff' : '#000000',
-            color: darkMode ? '#000000' : '#ffffff',
-            border: 'none',
-            marginLeft: 'auto'
-          }}
-        >
-          {darkMode ? '切換到亮色模式' : '切換到暗色模式'}
-        </Button> */}
+        <GlobalReminders />
+        {user && (
+          <Dropdown overlay={userMenu} placement="bottomRight">
+            <Button icon={<UserOutlined />} style={{ marginLeft: 16 }}>
+              <Space>
+                {user.name}（{user.position}）
+              </Space>
+            </Button>
+          </Dropdown>
+        )}
       </div>
     </Header>
   );

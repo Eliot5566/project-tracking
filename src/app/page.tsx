@@ -1,8 +1,10 @@
 "use client";
 
+
 import { Row, Col, Card, Typography, Button } from 'antd';
 import { ProjectOutlined, LineChartOutlined, TeamOutlined, FileOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 const { Title, Text } = Typography;
 
@@ -10,32 +12,39 @@ const features = [
   {
     title: '任務管理',
     description: '輕鬆追蹤和管理專案中的各項任務，提高工作效率。',
-    icon: <ProjectOutlined style={{ fontSize: 40 }} />,
+    icon: <ProjectOutlined style={{ fontSize: 40 }} />, 
     path: '/task'
   },
   {
     title: '進度追蹤',
     description: '即時查看專案進度，確保按時完成目標。',
-    icon: <LineChartOutlined style={{ fontSize: 40 }} />,
+    icon: <LineChartOutlined style={{ fontSize: 40 }} />, 
     path: '/progress'
   },
   // {
   //   title: '團隊管理',
   //   description: '管理團隊成員資料。',
-  //   icon: <TeamOutlined style={{ fontSize: 40 }} />,
+  //   icon: <TeamOutlined style={{ fontSize: 40 }} />, 
   //   path: '/team'
   // },
   {
     title: '文件管理',
     description: '上傳和管理專案文件，追蹤歷史版本。',
-    icon: <FileOutlined style={{ fontSize: 40 }} />,
+    icon: <FileOutlined style={{ fontSize: 40 }} />, 
     path: '/documents'
   },
-
 ];
 
 export default function Home() {
   const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
 
   return (
     <div

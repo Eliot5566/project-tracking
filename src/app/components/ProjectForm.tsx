@@ -38,7 +38,12 @@ interface TeamMember {
   name: string;
 }
 
-export default function ProjectForm({ open, onClose, onSubmit, initialData }: ProjectFormProps) {
+export default function ProjectForm({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
+}: ProjectFormProps) {
   const [form] = Form.useForm();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,11 +100,7 @@ export default function ProjectForm({ open, onClose, onSubmit, initialData }: Pr
       onCancel={onClose}
       confirmLoading={loading}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="name"
           label="專案名稱"
@@ -108,10 +109,7 @@ export default function ProjectForm({ open, onClose, onSubmit, initialData }: Pr
           <Input />
         </Form.Item>
 
-        <Form.Item
-          name="description"
-          label="專案描述"
-        >
+        <Form.Item name="description" label="專案描述">
           <Input.TextArea rows={4} />
         </Form.Item>
 
@@ -121,7 +119,7 @@ export default function ProjectForm({ open, onClose, onSubmit, initialData }: Pr
           rules={[{ required: true, message: '請選擇專案負責人' }]}
         >
           <Select>
-            {teamMembers.map(member => (
+            {teamMembers.map((member) => (
               <Select.Option key={member.id} value={member.id}>
                 {member.name}
               </Select.Option>
@@ -160,4 +158,4 @@ export default function ProjectForm({ open, onClose, onSubmit, initialData }: Pr
       </Form>
     </Modal>
   );
-} 
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Tooltip } from 'antd';
 import { PlusOutlined, BulbOutlined } from '@ant-design/icons';
 import { ConfigProvider, theme } from 'antd';
@@ -27,6 +28,15 @@ interface TeamMemberFormData {
 }
 
 export default function TeamPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);

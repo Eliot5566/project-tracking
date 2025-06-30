@@ -1,19 +1,19 @@
 'use client';
 
-import { 
-  Modal, 
-  Form, 
-  Input, 
-  Select, 
-  DatePicker, 
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  DatePicker,
   InputNumber,
-  message 
+  message,
 } from 'antd';
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 
-// 定義任務的資料結構 
-// interface 的使用可以讓我們定義一個物件的結構，這樣在使用時可以更清楚地知道每個屬性是什麼類型 
+// 定義任務的資料結構
+// interface 的使用可以讓我們定義一個物件的結構，這樣在使用時可以更清楚地知道每個屬性是什麼類型
 // 這裡的 Task 介面定義了一個任務的結構，包括 id、標題、描述、狀態、優先級、截止日期、負責人、專案 ID 和名稱、進度、創建和更新時間等屬性
 // 這些屬性都是任務所需的基本資訊，並且有明確的類型定義
 // 這樣在使用時可以更清楚地知道每個屬性是什麼類型，並且可以在編譯時檢查類型是否正確
@@ -50,8 +50,8 @@ interface TaskFormProps {
   open: boolean; // 控制對話框是否顯示的布林值 類似房間裡電燈的開關
   onClose: () => void; // 關閉對話框的函數 void表示此函數不返回任何值
   onSubmit: (values: TaskFormData) => Promise<void>; // 用於提交表單，一個送出的方法，values是表單的資料
-  // Promise<void>表示這個函數會返回一個 Promise，並且不會返回任何值 , Promise 是一個表示異步操作的物件 
-  // 當這個函數被調用時，它會返回一個 Promise，這個 Promise 會在操作完成後被解析 
+  // Promise<void>表示這個函數會返回一個 Promise，並且不會返回任何值 , Promise 是一個表示異步操作的物件
+  // 當這個函數被調用時，它會返回一個 Promise，這個 Promise 會在操作完成後被解析
   initialData?: Task;
 }
 
@@ -65,7 +65,6 @@ interface TeamMember {
   name: string;
 }
 
-
 // TaskForm 組件用於顯示任務的新增和編輯表單
 // 這個組件使用了 Ant Design 的 Modal、Form、Input、Select 和 DatePicker 組件來實現表單的功能
 // 這個組件的主要功能是用於新增和編輯任務，並且可以選擇專案和負責人
@@ -73,7 +72,12 @@ interface TeamMember {
 // 後方的 : TaskFormProps 是一個 TypeScript 的介面，用於定義這個組件的 props 的類型 代表這個組件的 props 的類型是 TaskFormProps
 
 // 這個組件使用了 useState 和 useEffect 來管理狀態和副作用
-export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskFormProps) {
+export default function TaskForm({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
+}: TaskFormProps) {
   const [form] = Form.useForm();
   const [projects, setProjects] = useState<Project[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -114,7 +118,9 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
     if (open && initialData) {
       form.setFieldsValue({
         ...initialData,
-        startDate: initialData.startDate ? dayjs(initialData.startDate) : undefined,
+        startDate: initialData.startDate
+          ? dayjs(initialData.startDate)
+          : undefined,
         dueDate: initialData.dueDate ? dayjs(initialData.dueDate) : undefined,
       });
     } else {
@@ -126,10 +132,14 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
     try {
       const taskData = {
         ...values,
-        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
-        dueDate: values.dueDate ? values.dueDate.format('YYYY-MM-DD') : undefined,
+        startDate: values.startDate
+          ? values.startDate.format('YYYY-MM-DD')
+          : undefined,
+        dueDate: values.dueDate
+          ? values.dueDate.format('YYYY-MM-DD')
+          : undefined,
         progress: values.status === 'completed' ? 100 : values.progress || 0,
-        ...(initialData?.id ? { id: initialData.id } : {})
+        ...(initialData?.id ? { id: initialData.id } : {}),
       };
       await onSubmit(taskData);
       onClose();
@@ -146,11 +156,7 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
       onCancel={onClose}
       confirmLoading={loading}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="title"
           label="任務名稱"
@@ -159,10 +165,7 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
           <Input />
         </Form.Item>
 
-        <Form.Item
-          name="description"
-          label="任務描述"
-        >
+        <Form.Item name="description" label="任務描述">
           <Input.TextArea rows={4} />
         </Form.Item>
 
@@ -172,7 +175,7 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
           rules={[{ required: true, message: '請選擇所屬專案' }]}
         >
           <Select>
-            {projects.map(project => (
+            {projects.map((project) => (
               <Select.Option key={project.id} value={project.id}>
                 {project.name}
               </Select.Option>
@@ -186,7 +189,7 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
           rules={[{ required: true, message: '請選擇負責人' }]}
         >
           <Select>
-            {teamMembers.map(member => (
+            {teamMembers.map((member) => (
               <Select.Option key={member.id} value={member.id}>
                 {member.name}
               </Select.Option>
@@ -235,4 +238,4 @@ export default function TaskForm({ open, onClose, onSubmit, initialData }: TaskF
       </Form>
     </Modal>
   );
-} 
+}

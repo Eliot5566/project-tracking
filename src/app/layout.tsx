@@ -14,6 +14,14 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: PropsWithChildren) {
   const [darkMode, setDarkMode] = useState(false);
+  const [isLogin, setIsLogin] = useState<undefined | boolean>(undefined);
+
+  // 僅 client 檢查登入狀態
+  require('react').useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLogin(localStorage.getItem('isLogin') === '1');
+    }
+  }, []);
 
   return (
     <ConfigProvider
@@ -24,7 +32,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
     >
       <html lang="zh-TW">
         <body className={inter.className}>
-          <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+          {isLogin === true && <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />}
           <Layout>{children}</Layout>
         </body>
       </html>

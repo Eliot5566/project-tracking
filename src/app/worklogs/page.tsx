@@ -3,6 +3,7 @@
 import { Table, Button, Upload, message, DatePicker, Input, Form, Select } from 'antd';
 import { UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 
 
@@ -34,6 +35,15 @@ const columns = [
 ];
 
 export default function WorkLogBlock() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
   const [data, setData] = useState<WorkLog[]>([]);
   const [form] = Form.useForm();
   const [userId, setUserId] = useState<number | undefined>(undefined);

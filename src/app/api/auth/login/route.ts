@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connect } from '@/lib/db';
-import { jwtSign } from '@/lib/jwt';
+import { getConnection } from '@/lib/db';
 import sql from 'mssql';
 
 if (typeof window !== 'undefined') {
@@ -18,7 +17,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const pool = await connect();
+    const pool = await getConnection();
     
     // 從 JCYDB 資料庫查詢使用者
     const result = await pool.request()
@@ -59,6 +58,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // 查詢 TeamMembers.id
+    const teamMemberResult = await pool.request()
+      .input('employeeId', sql.NVarChar, employeeId)
+      .query(`
+        SELECT TOP 1 id FROM [ProjectTracking].[dbo].[TeamMembers] WHERE employeeId = @employeeId
+      `);
+
+    const teamMemberId = teamMemberResult.recordset.length > 0 ? teamMemberResult.recordset[0].id : null;
+
     // 更新登入資訊
     await pool.request()
       .input('employeeId', sql.NVarChar, employeeId)
@@ -70,25 +78,18 @@ export async function POST(request: Request) {
         WHERE [工號] = @employeeId
       `);
 
-    // 生成 JWT token
-    const token = await jwtSign({
-      employeeId: user.employeeId,
-      name: user.name,
-      department: user.departmentName,
-      position: user.position,
-      role: user.position.includes('主管') ? 'admin' : 'user'
-    });
-
+    // 不產生 JWT，直接回傳 user 物件，並加上 teamMemberId
     return NextResponse.json({
       success: true,
       data: {
-        token,
         user: {
           employeeId: user.employeeId,
           name: user.name,
           department: user.departmentName,
           position: user.position,
-          role: user.position.includes('主管') ? 'admin' : 'user'
+          role: ['經理', '副理', '總經理', '董事長', '課長'].some(pos => user.position.includes(pos)) || user.departmentCode.startsWith('IT') ? 'admin' : 'user',
+          email: user.email,
+          teamMemberId, // 新增這個欄位
         }
       }
     });

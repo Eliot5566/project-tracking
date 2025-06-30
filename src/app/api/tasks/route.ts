@@ -32,10 +32,12 @@ interface TaskQueryParams {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+
     const projectId = searchParams.get('projectId');
     const assignedTo = searchParams.get('assignedTo');
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
+    const search = searchParams.get('search');
 
     let sqlQuery = `
       SELECT t.*, 
@@ -48,25 +50,38 @@ export async function GET(request: Request) {
 
     const params: (string | number | null)[] = [];
     const conditions: string[] = [];
+    let paramIdx = 0;
 
     if (projectId) {
-      conditions.push('t.projectId = @param0');
-      params.push(parseInt(projectId));
+      const ids = projectId.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length > 0) {
+        conditions.push(`t.projectId IN (${ids.map((_, i) => `@param${paramIdx + i}`).join(',')})`);
+        params.push(...ids.map(Number));
+        paramIdx += ids.length;
+      }
     }
-
     if (assignedTo) {
-      conditions.push('t.assignedTo = @param1');
-      params.push(parseInt(assignedTo));
+      const ids = assignedTo.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length > 0) {
+        conditions.push(`t.assignedTo IN (${ids.map((_, i) => `@param${paramIdx + i}`).join(',')})`);
+        params.push(...ids.map(Number));
+        paramIdx += ids.length;
+      }
     }
-
     if (status) {
-      conditions.push('t.status = @param2');
+      conditions.push(`t.status = @param${paramIdx}`);
       params.push(status);
+      paramIdx++;
     }
-
     if (priority) {
-      conditions.push('t.priority = @param3');
+      conditions.push(`t.priority = @param${paramIdx}`);
       params.push(priority);
+      paramIdx++;
+    }
+    if (search) {
+      conditions.push(`(t.title LIKE @param${paramIdx} OR t.description LIKE @param${paramIdx})`);
+      params.push(`%${search}%`);
+      paramIdx++;
     }
 
     if (conditions.length > 0) {

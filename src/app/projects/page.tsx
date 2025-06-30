@@ -1,12 +1,16 @@
 'use client';
 
+
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Table, Button, Modal, Form, Input, DatePicker, Select, message, Space, Card, Progress, Tabs, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, BarsOutlined, ScheduleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+
 import GanttChart from '../components/GanttChart';
 import ExportButton from '../components/ExportButton';
+import ProjectTasksTable from './ProjectTasksTable';
 import { Task, ViewMode } from 'gantt-task-react';
 
 interface Project {
@@ -34,16 +38,28 @@ interface TeamMember {
 const { Option } = Select;
 
 export default function ProjectsPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
+
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [form] = Form.useForm();
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'gantt'
-
+  // 篩選狀態
+  const [selectedManagers, setSelectedManagers] = useState<number[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   // 甘特圖任務數據
   const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
-
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const fetchTeamMembers = async () => {
@@ -62,15 +78,18 @@ export default function ProjectsPage() {
   };
 
   // 獲取專案數據
-  const fetchProjects = async () => {
+  const fetchProjects = async (managerIds?: number[], projectIds?: number[]) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/projects');
+      let url = '/api/projects';
+      const params: string[] = [];
+      if (managerIds && managerIds.length > 0) params.push(`managerId=${managerIds.join(',')}`);
+      if (projectIds && projectIds.length > 0) params.push(`projectId=${projectIds.join(',')}`);
+      if (params.length > 0) url += '?' + params.join('&');
+      const response = await fetch(url);
       const result = await response.json();
-      
       if (result.success) {
         setProjects(result.data);
-        
         // 將專案數據轉換為甘特圖任務格式
         const ganttData = result.data.map((project: Project) => ({
           id: `Project-${project.id}`,
@@ -86,7 +105,6 @@ export default function ProjectsPage() {
             progressColor: '#1890ff'
           }
         }));
-        
         setGanttTasks(ganttData);
       } else {
         message.error('獲取專案數據失敗');
@@ -117,9 +135,9 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => {
-    fetchProjects();
+    fetchProjects(selectedManagers, selectedProjects);
     fetchTeamMembers();
-  }, []);
+  }, [selectedManagers, selectedProjects]);
 
   const handleAdd = () => {
     setEditingProject(null);
@@ -365,12 +383,43 @@ export default function ProjectsPage() {
           </Space>
         }
       >
+        {/* 篩選區塊 */}
+        <Space style={{ marginBottom: 16 }}>
+          <Select
+            mode="multiple"
+            allowClear
+            style={{ minWidth: 180 }}
+            placeholder="篩選負責人"
+            value={selectedManagers}
+            onChange={setSelectedManagers}
+          >
+            {teamMembers.map(member => (
+              <Option key={member.id} value={member.id}>{member.name}</Option>
+            ))}
+          </Select>
+          <Select
+            mode="multiple"
+            allowClear
+            style={{ minWidth: 180 }}
+            placeholder="篩選專案"
+            value={selectedProjects}
+            onChange={setSelectedProjects}
+          >
+            {projects.map(project => (
+              <Option key={project.id} value={project.id}>{project.name}</Option>
+            ))}
+          </Select>
+        </Space>
         {viewMode === 'list' ? (
           <Table
             columns={columns}
             dataSource={projects}
             rowKey="id"
             loading={loading}
+            expandable={{
+              expandedRowRender: (record) => <ProjectTasksTable projectId={record.id} />,
+              expandRowByClick: true,
+            }}
           />
         ) : (
           <GanttChart tasks={ganttTasks} />

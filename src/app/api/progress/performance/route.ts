@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+
+
 // 定義績效數據接口
 interface PerformanceData {
   personalPerformance: PersonalPerformance[];
@@ -11,6 +13,9 @@ interface PerformanceData {
 }
 
 
+
+// 定義個人績效數據接口
+// 包含成員ID、姓名、分配任務數、完成任務數
 interface PersonalPerformance {
   memberId: number;
   name: string;
@@ -21,6 +26,8 @@ interface PersonalPerformance {
   averageDelay: number; // 單位: 天
 }
 
+// 定義專案完成率數據接口
+// 包含專案ID、名稱、計劃工期、實際工期
 interface ProjectCompletionRate {
   projectId: number;
   name: string;
@@ -32,6 +39,7 @@ interface ProjectCompletionRate {
   onTimeRate: number | null;
 }
 
+// overallStats 接口定義 總體數據接口
 interface OverallStats {
   totalProjects: number;
   completedProjects: number;
@@ -41,6 +49,7 @@ interface OverallStats {
   averageTeamPerformance: number | null;
 }
 
+// 定義時間追蹤數據接口
 interface TimeTracking {
   date: string;
   tasksCompleted: number;
@@ -48,33 +57,45 @@ interface TimeTracking {
   efficiency: number; // 任務完成數/工時
 }
 
+
+
+
+// 獲取績效數據 const searchParams = new URL(req.url).searchParams;
+// 支持時間範圍過濾：week, month, quarter, year
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const timeRange = searchParams.get('timeRange') || 'month'; // 'week', 'month', 'quarter', 'year'    // 設定時間範圍
     let taskDateFilter: string;
     let projectDateFilter: string;
+    // 透過switch語句設定日期範圍過濾條件
+    // 根據時間範圍選擇不同的日期過濾條
     switch (timeRange) {
+      // 如果是week，則過濾條件為最近7天
       case 'week':
         taskDateFilter = "DATEDIFF(day, t.createdAt, GETDATE()) <= 7";
         projectDateFilter = "DATEDIFF(day, p.createdAt, GETDATE()) <= 7";
         break;
+        // 如果是month，則過濾條件為最近30天
       case 'month':
         taskDateFilter = "DATEDIFF(day, t.createdAt, GETDATE()) <= 30";
         projectDateFilter = "DATEDIFF(day, p.createdAt, GETDATE()) <= 30";
         break;
+        // 如果是quarter，則過濾條件為最近90天
       case 'quarter':
         taskDateFilter = "DATEDIFF(day, t.createdAt, GETDATE()) <= 90";
         projectDateFilter = "DATEDIFF(day, p.createdAt, GETDATE()) <= 90";
         break;
+        // 如果是year，則使用365天的過濾條件
       case 'year':
         taskDateFilter = "DATEDIFF(day, t.createdAt, GETDATE()) <= 365";
         projectDateFilter = "DATEDIFF(day, p.createdAt, GETDATE()) <= 365";
         break;
+        // 預設情況下使用最近30天的過濾條件
       default:
         taskDateFilter = "DATEDIFF(day, t.createdAt, GETDATE()) <= 30";
         projectDateFilter = "DATEDIFF(day, p.createdAt, GETDATE()) <= 30";
-    }    // 獲取個人績效
+    }    // 獲取個人績效 await query是一個自定義的數據庫查詢函數 await用於執行SQL查詢並返回結果 query則是查詢語句
     const personalPerformance = await query<PersonalPerformance[]>(`
       SELECT 
         t.assignedTo as memberId,

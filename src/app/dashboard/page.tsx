@@ -1,6 +1,7 @@
 'use client';
  
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Row, Col, Statistic, Table, Progress, Tag, Space, Tabs, Select, DatePicker } from 'antd';
 import {
   ProjectOutlined,
@@ -87,6 +88,15 @@ const statusColors = {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
  
 export default function DashboardPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLogin = localStorage.getItem('isLogin') === '1';
+      if (!isLogin) {
+        router.replace('/login');
+      }
+    }
+  }, []);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('week');
