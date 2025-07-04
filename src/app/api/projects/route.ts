@@ -215,6 +215,11 @@ export async function POST(request: Request) {
 }
 
 // 更新專案
+// 用於函數處理PUT方法
+// @param0、@param2 等是參數佔位符
+// 這些佔位符會在執行查詢時被實際的參數值替換
+// 這樣可以避免 SQL 注入攻擊
+// 例如: @param0 = '專案名稱'，@param1 = '專案描述'
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
@@ -255,7 +260,7 @@ export async function PUT(request: Request) {
       WHERE p.id = @param6
       GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt;
     `;
-
+    // param6 來自於 WHERE 子句中的 id 條件
     const updatedProject = await query<Project[]>(sqlQuery, [
       name,
       description,
@@ -266,6 +271,12 @@ export async function PUT(request: Request) {
       id,
     ]);
 
+    // 如果更新後的專案數量為 0，則表示沒有找到指定的專案
+    // 這裡使用了 TypeScript 的類型斷言，確保 updatedProject 是一個 Project 類型的數組
+    // 類型斷言寫法是 <Project[]>updatedProject 基本上是將 updatedProject 斷言為 Project 類型的數組
+    // 這樣可以確保在後續操作中，TypeScript 能夠正確識別 updatedProject 的類型
+    // 如果專案不存在，則返回 404 錯誤
+
     if (updatedProject.length === 0) {
       return NextResponse.json(
         {
@@ -275,7 +286,7 @@ export async function PUT(request: Request) {
         { status: 404 }
       );
     }
-
+    // 返回更新後的專案資訊 返回success: true 表示更新成功
     return NextResponse.json({
       success: true,
       data: updatedProject[0],

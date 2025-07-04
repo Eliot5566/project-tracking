@@ -44,6 +44,11 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       label: '任務管理',
     },
     {
+      key: '/worklogs',
+      icon: <BulbOutlined />,
+      label: '工作日誌',
+    },
+    {
       key: '/team',
       icon: <TeamOutlined />,
       label: '團隊管理',
