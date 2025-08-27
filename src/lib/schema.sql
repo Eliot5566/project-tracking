@@ -188,6 +188,16 @@ CREATE TABLE Audit (
     updatedAt DATETIME NOT NULL DEFAULT GETDATE()
 );
 
+CREATE TABLE WorkLogs (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    userId INT NOT NULL,
+    date DATE NOT NULL,
+    task NVARCHAR(200) NOT NULL,
+    content NVARCHAR(MAX) NOT NULL,
+    hours DECIMAL(5,2) NOT NULL, -- 關鍵：可存 0.5、3.5 等小數
+    createdAt DATETIME DEFAULT GETDATE(),
+    updatedAt DATETIME DEFAULT GETDATE()
+);
 
 -- 建立索引
 CREATE INDEX IX_Tasks_ProjectId ON Tasks(projectId);

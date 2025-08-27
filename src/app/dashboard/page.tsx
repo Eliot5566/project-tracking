@@ -1,8 +1,20 @@
 'use client';
- 
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Row, Col, Statistic, Table, Progress, Tag, Space, Tabs, Select, DatePicker } from 'antd';
+import {
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Table,
+  Progress,
+  Tag,
+  Space,
+  Tabs,
+  Select,
+  DatePicker,
+} from 'antd';
 import {
   ProjectOutlined,
   TeamOutlined,
@@ -24,9 +36,9 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from 'recharts';
- 
+
 interface DashboardData {
   projectStats: {
     totalProjects: number;
@@ -75,7 +87,7 @@ interface DashboardData {
     color: string;
   }>;
 }
- 
+
 // 狀態顏色設置
 const statusColors = {
   completed: '#52c41a',
@@ -83,10 +95,10 @@ const statusColors = {
   delayed: '#ff4d4f',
   pending: '#faad14',
 };
- 
+
 // 圓餅圖顏色
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
- 
+
 export default function DashboardPage() {
   const router = useRouter();
   useEffect(() => {
@@ -100,7 +112,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('week');
- 
+
   useEffect(() => {
     async function fetchDashboardData() {
       setLoading(true);
@@ -110,9 +122,9 @@ export default function DashboardPage() {
           throw new Error('Failed to fetch dashboard data');
         }
         const result = await response.json();
- 
+
         // 修正專案名稱顯示問題
-        const fixedProjectProgress = result.projectProgress.map(p => ({
+        const fixedProjectProgress = result.projectProgress.map((p) => ({
           ...p,
           project: p.projectName || '未命名專案',
         }));
@@ -128,7 +140,7 @@ export default function DashboardPage() {
             ...result.taskStats,
             completionRate: result.taskStats.completionRate || 0,
           },
-          projectProgress: fixedProjectProgress
+          projectProgress: fixedProjectProgress,
         });
       } catch (error) {
         console.error('獲取儀表板數據失敗:', error);
@@ -136,21 +148,29 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
- 
+
     fetchDashboardData();
   }, []);
- 
-  // 修正數據顯示邏輯，確保處理空數據情況
-  const taskByStatusData = Array.isArray(data?.taskByStatus) ? data.taskByStatus : [];
-  const projectProgressData = Array.isArray(data?.projectProgress) ? data.projectProgress : [];
-  const teamWorkloadData = Array.isArray(data?.teamWorkload) ? data.teamWorkload : [];
-  const recentActivitiesData = Array.isArray(data?.recentActivities) ? data.recentActivities : [];
- 
+
+  // 修正數據顯示邏輯，確保處理空數據情況 Array.isArray代表數據是陣列 
+  const taskByStatusData = Array.isArray(data?.taskByStatus)
+    ? data.taskByStatus
+    : [];
+  const projectProgressData = Array.isArray(data?.projectProgress)
+    ? data.projectProgress
+    : [];
+  const teamWorkloadData = Array.isArray(data?.teamWorkload)
+    ? data.teamWorkload
+    : [];
+  const recentActivitiesData = Array.isArray(data?.recentActivities)
+    ? data.recentActivities
+    : [];
+
   // 活動狀態標籤渲染
   const renderStatusTag = (status: string) => {
     let color = '';
     let text = '';
- 
+
     switch (status) {
       case 'completed':
         color = statusColors.completed;
@@ -168,10 +188,10 @@ export default function DashboardPage() {
         color = statusColors.pending;
         text = '待處理';
     }
- 
+
     return <Tag color={color}>{text}</Tag>;
   };
- 
+
   // 活動列表表格列定義
   const activityColumns = [
     {
@@ -196,7 +216,7 @@ export default function DashboardPage() {
       key: 'date',
     },
   ];
- 
+
   // 專案進度表格列定義
   const progressColumns = [
     {
@@ -209,7 +229,10 @@ export default function DashboardPage() {
       dataIndex: 'progress',
       key: 'progress',
       render: (progress: number) => (
-        <Progress percent={progress} status={progress === 100 ? 'success' : 'active'} />
+        <Progress
+          percent={progress}
+          status={progress === 100 ? 'success' : 'active'}
+        />
       ),
     },
     {
@@ -219,7 +242,7 @@ export default function DashboardPage() {
       render: renderStatusTag,
     },
   ];
- 
+
   return (
     <div style={{ padding: '24px' }}>
       {/* 時間範圍選擇 */}
@@ -231,13 +254,12 @@ export default function DashboardPage() {
               <Select
                 defaultValue="week"
                 style={{ width: 120 }}
-                onChange={value => setTimeRange(value)}
+                onChange={(value) => setTimeRange(value)}
                 options={[
                   { value: 'today', label: '今日' },
                   { value: 'week', label: '本週' },
                   { value: 'month', label: '本月' },
                   { value: 'quarter', label: '本季度' },
-
                 ]}
               />
               <DatePicker.RangePicker style={{ marginLeft: 16 }} />
@@ -245,7 +267,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
- 
+
       {/* 統計數字卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
@@ -292,9 +314,7 @@ export default function DashboardPage() {
               prefix={<TeamOutlined />}
             />
             <div style={{ marginTop: 8 }}>
-              <span>
-                {data?.teamStats.activeMembers || 0} 活躍成員
-              </span>
+              <span>{data?.teamStats.activeMembers || 0} 活躍成員</span>
             </div>
           </Card>
         </Col>
@@ -316,7 +336,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
- 
+
       {/* 任務統計圖表 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
@@ -328,8 +348,18 @@ export default function DashboardPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="completed" stroke="#52c41a" name="完成任務" />
-                <Line type="monotone" dataKey="created" stroke="#1890ff" name="創建任務" />
+                <Line
+                  type="monotone"
+                  dataKey="completed"
+                  stroke="#52c41a"
+                  name="完成任務"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="created"
+                  stroke="#1890ff"
+                  name="創建任務"
+                />
               </LineChart>
             </ResponsiveContainer>
           </Card>
@@ -346,11 +376,14 @@ export default function DashboardPage() {
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) =>
+                    `${name}: ${(percent * 100).toFixed(0)}%`
+                  }
                 >
-                  {Array.isArray(data?.taskByStatus) && data.taskByStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
+                  {Array.isArray(data?.taskByStatus) &&
+                    data.taskByStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -358,7 +391,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
- 
+
       {/* 專案進度和團隊工作量 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
@@ -383,14 +416,18 @@ export default function DashboardPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="activeProjects" name="進行中專案" fill="#8884d8" />
+                <Bar
+                  dataKey="activeProjects"
+                  name="進行中專案"
+                  fill="#8884d8"
+                />
                 <Bar dataKey="activeTasks" name="進行中任務" fill="#82ca9d" />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </Col>
       </Row>
- 
+
       {/* 最近活動 */}
       <Row gutter={[16, 16]}>
         <Col span={24}>

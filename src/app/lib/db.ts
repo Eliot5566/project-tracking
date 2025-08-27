@@ -15,6 +15,36 @@ const config: sql.config = {
 
 let pool: sql.ConnectionPool | null = null;
 
+// 依據 SQL 語句與參數位置，正確處理 WorkLogs 的 hours 欄位型別
+export async function query<T>(sqlQuery: string, params: (string | number | null)[] = []) {
+  const pool = await getConnectionPool();
+  const request = pool.request();
+  params.forEach((param, index) => {
+    if (param === null || param === undefined) {
+      request.input(`param${index}`, sql.NVarChar, null);
+    } else if (typeof param === 'number') {
+      // WorkLogs INSERT: hours 在 @param4
+      // WorkLogs UPDATE: hours = @param3
+      if (
+        sqlQuery.includes('WorkLogs') &&
+        (
+          (sqlQuery.includes('VALUES') && index === 4) ||
+          (sqlQuery.includes('SET') && sqlQuery.match(/hours\s*=\s*@param(\d+)/)?.[1] === String(index))
+        )
+      ) {
+        request.input(`param${index}`, sql.Decimal(5, 2), param);
+      } else {
+        request.input(`param${index}`, sql.Int, param);
+      }
+    } else {
+      request.input(`param${index}`, sql.NVarChar, param);
+    }
+  });
+  const result = await request.query(sqlQuery);
+  return result.recordset ? result.recordset : result;
+}
+
+
 export async function getConnectionPool(): Promise<sql.ConnectionPool> {
   if (!pool) {
     pool = await sql.connect(config);

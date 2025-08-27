@@ -29,16 +29,20 @@ interface WorkLog {
   hours: number;
 }
 
-const columns = [
+import { Modal } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { error } from 'console';
+
+const columns = (
+  handleEdit: (record: WorkLog) => void,
+  handleDelete: (id: number) => void,
+  currentUserId?: number
+) => [
   { title: '使用者', dataIndex: 'userName', key: 'userName', width: 100 },
   {
     title: '日期',
     dataIndex: 'date',
     key: 'date',
-    //針對日期格式進行處理 如果 date 有值，則將其轉換為台灣地區的日期格式
-    // 使用 toLocaleDateString 方法將日期格式化為 yyyy/mm/dd  numeric是數字格式，month是兩位數格式，day是兩位數格式
-    // replace 方法將斜線替換為斜線 /\//g, 這裡的 g 是全局匹配的意思  /\//代表正則表達式中的斜線字符
-    // 這樣可以確保日期格式為 yyyy/mm/dd
     render: (date: string) =>
       date
         ? new Date(date)
@@ -53,9 +57,126 @@ const columns = [
   { title: '工作事項', dataIndex: 'task', key: 'task' },
   { title: '作業內容', dataIndex: 'content', key: 'content' },
   { title: '工時', dataIndex: 'hours', key: 'hours' },
+  {
+    title: '操作',
+    key: 'action',
+    width: 120,
+    render: (_: any, record: WorkLog) => {
+      // 如果 currentUserId 未定義或與 record.userId 不符，則不顯示操作按鈕 record.userId是 WorkLog 的 userId currentUserId 是當前登入者的 userId 存放在 localStorage
+      if (!currentUserId || record.userId !== currentUserId) return null;
+      return (
+        <Space>
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => handleEdit(record)}
+          >
+            編輯
+          </Button>
+          <Button
+            icon={<DeleteOutlined />}
+            size="small"
+            danger
+            onClick={() => handleDelete(record.id!)}
+          >
+            刪除
+          </Button>
+        </Space>
+      );
+    },
+  },
 ];
 
 export default function WorkLogBlock() {
+  // 取得登入者 userId（teamMemberId）
+  const [loginUserId, setLoginUserId] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.teamMemberId) setLoginUserId(Number(user.teamMemberId));
+        } catch {}
+      }
+    }
+  }, []);
+
+  // 編輯日誌 Modal 狀態
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState<WorkLog | null>(null);
+  const [editForm, setEditForm] = useState({
+    date: '',
+    task: '',
+    content: '',
+    hours: 0,
+  });
+
+  // 編輯日誌
+  const handleEdit = (record: WorkLog) => {
+    setEditingLog(record);
+    setEditForm({
+      date: record.date,
+      task: record.task,
+      content: record.content,
+      hours: record.hours,
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingLog) return;
+    let hoursNum = parseFloat(editForm.hours as any);
+    if (isNaN(hoursNum) || hoursNum <= 0) {
+      message.error('請輸入正確工時');
+      return;
+    }
+    let result;
+    try {
+      const res = await fetch('/api/worklogs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingLog.id,
+          userId: editingLog.userId,
+          ...editForm,
+          hours: hoursNum,
+        }),
+      });
+      result = await res.json();
+    } catch {
+      message.error('伺服器回應格式錯誤，請聯絡管理員');
+
+      return;
+    }
+    if (result.success) {
+      setData((prev) =>
+        prev.map((log) => (log.id === editingLog.id ? result.data : log))
+      );
+      setEditModalOpen(false);
+      setEditingLog(null);
+      message.success('編輯成功');
+    } else {
+      message.error(result.error || '編輯失敗');
+    }
+  };
+
+  // 刪除日誌
+  const handleDelete = (id: number) => {
+    Modal.confirm({
+      title: '確定要刪除此日誌嗎？',
+      onOk: async () => {
+        const res = await fetch(`/api/worklogs?id=${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        if (result.success) {
+          setData((prev) => prev.filter((log) => log.id !== id));
+          message.success('刪除成功');
+        } else {
+          message.error(result.error || '刪除失敗');
+        }
+      },
+    });
+  };
   const router = useRouter();
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -148,18 +269,39 @@ export default function WorkLogBlock() {
   }, []);
 
   // Excel 日期轉字串
+  // const excelDateToString = (excelDate: number | string) => {
+  //   if (typeof excelDate === 'number') {
+  //     const date = new Date((excelDate - 25569) * 86400 * 1000);
+  //     return date.toISOString().slice(0, 10);
+  //   }
+  //   if (typeof excelDate === 'string' && excelDate.length >= 8) {
+  //     // yyyy-mm-dd or yyyy/mm/dd
+  //     return excelDate.replace(/\//g, '-');
+  //   }
+  //   return excelDate;
+  // };
+
   const excelDateToString = (excelDate: number | string) => {
     if (typeof excelDate === 'number') {
       const date = new Date((excelDate - 25569) * 86400 * 1000);
       return date.toISOString().slice(0, 10);
     }
-    if (typeof excelDate === 'string' && excelDate.length >= 8) {
-      // yyyy-mm-dd or yyyy/mm/dd
-      return excelDate.replace(/\//g, '-');
+    if (typeof excelDate === 'string') {
+      const s = excelDate.trim();
+      // 支援 20250102 → 2025-01-02
+      if (/^\d{8}$/.test(s)) {
+        return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+      }
+      // yyyy-mm-dd, yyyy/mm/dd, yyyy.mm.dd
+      if (/^\d{4}[-/.]\d{2}[-/.]\d{2}$/.test(s)) {
+        return s.replace(/[/.]/g, '-');
+      }
+      // fallback: dayjs parse
+      const d = dayjs(s);
+      if (d.isValid()) return d.format('YYYY-MM-DD');
     }
     return excelDate;
   };
-
   // 匯入 Excel
   const [importing, setImporting] = useState(false);
   const handleImport = (file: File) => {
@@ -175,35 +317,39 @@ export default function WorkLogBlock() {
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       let lastDate = '';
       // 檢查第一行是否為標題 json.slice(1) 用於跳過第一行標題 map(row => row) 用於將每一行轉換為物件
-      const rows = json
-        .slice(1)
-        .map((row: any) => {
-          // 設置dateVal 為第一列的值，若為空則使用上次的日期
-          let dateVal = row[0];
-          // 如果 dateVal 為 undefined null 或空值則使用上次的日期 ；用於處理 excel中 跨欄置中的問題
-          if (dateVal === undefined || dateVal === null || dateVal === '') {
-            dateVal = lastDate;
+      const rows = [];
+      for (const row of json.slice(1)) {
+        let dateVal = row[0];
+        let parsedDate = '';
+        if (dateVal === undefined || dateVal === null || dateVal === '') {
+          parsedDate = lastDate;
+        } else {
+          parsedDate = excelDateToString(dateVal);
+          // 檢查是否為有效日期
+          if (parsedDate && dayjs(parsedDate).isValid()) {
+            lastDate = parsedDate;
           } else {
-            // 將 Excel 日期轉為字串格式  excelDateToString是將 Excel 日期轉為字串格式 內建於 XLSX 庫
-            dateVal = excelDateToString(dateVal);
-            // 如果 dateVal 不是有效日期，則使用上次的日期
-            lastDate = dateVal;
+            // 無效日期，略過這一行
+            continue;
           }
-          return {
-            userId,
-            userName: users.find((u) => u.id === userId)?.name || '',
-            date: dateVal,
-            task: row[1],
-            content: row[2],
-            hours: parseFloat(row[3]), //parseFloat 用於將工時轉為數字
-          };
-        })
-        .filter(
-          (r) =>
-            r.date &&
-            new Date(r.date).getDay() !== 0 &&
-            new Date(r.date).getDay() !== 6
-        );
+        }
+        // 檢查日期是否有效
+        if (!parsedDate || !dayjs(parsedDate).isValid()) continue;
+        // 跳過六日
+        const dayOfWeek = dayjs(parsedDate).day();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+        rows.push({
+          userId,
+          userName: users.find((u) => u.id === userId)?.name || '',
+          date: parsedDate,
+          task: row[1] != null ? String(row[1]) : '',
+          content: row[2] != null ? String(row[2]) : '',
+          hours:
+            row[3] !== undefined && row[3] !== null && row[3] !== ''
+              ? Number(row[3])
+              : 0,
+        });
+      }
 
       // 寫入後端
       for (const row of rows) {
@@ -339,7 +485,14 @@ export default function WorkLogBlock() {
       const res = await fetch('/api/worklogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...row, userId, hours: parseFloat(row.hours) }),
+        body: JSON.stringify({
+          ...row,
+          userId,
+          hours:
+            row.hours !== undefined && row.hours !== null && row.hours !== ''
+              ? Number(row.hours)
+              : 0,
+        }),
       });
       const result = await res.json();
       if (result.success) success++;
@@ -818,32 +971,34 @@ export default function WorkLogBlock() {
           }}
         >
           <Table
-            columns={columns.map((col) => ({
-              ...col,
-              onCell: () => ({
-                style: {
-                  fontFamily: `'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif`,
-                  fontSize: 17,
-                  color: '#1a1a1a',
-                  padding: '12px 10px',
-                  background: 'transparent',
-                  borderBottom: '1.5px solid #e3e9f7',
-                },
-              }),
-              onHeaderCell: () => ({
-                style: {
-                  fontFamily: `'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif`,
-                  fontWeight: 800,
-                  fontSize: 18,
-                  background:
-                    'linear-gradient(90deg, #f4f6fa 80%, #e3e9f7 100%)',
-                  color: '#1a237e',
-                  padding: '14px 10px',
-                  borderBottom: '2.5px solid #bfcbe6',
-                  letterSpacing: 1,
-                },
-              }),
-            }))}
+            columns={columns(handleEdit, handleDelete, loginUserId).map(
+              (col) => ({
+                ...col,
+                onCell: () => ({
+                  style: {
+                    fontFamily: `'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif`,
+                    fontSize: 17,
+                    color: '#1a1a1a',
+                    padding: '12px 10px',
+                    background: 'transparent',
+                    borderBottom: '1.5px solid #e3e9f7',
+                  },
+                }),
+                onHeaderCell: () => ({
+                  style: {
+                    fontFamily: `'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif`,
+                    fontWeight: 800,
+                    fontSize: 18,
+                    background:
+                      'linear-gradient(90deg, #f4f6fa 80%, #e3e9f7 100%)',
+                    color: '#1a237e',
+                    padding: '14px 10px',
+                    borderBottom: '2.5px solid #bfcbe6',
+                    letterSpacing: 1,
+                  },
+                }),
+              })
+            )}
             dataSource={data}
             rowKey={(r) =>
               r.id != null ? r.id : `row-${r.date}-${r.task}-${r.content}`
@@ -880,6 +1035,56 @@ export default function WorkLogBlock() {
               }
             }}
           />
+
+          {/* 編輯日誌 Modal */}
+          <Modal
+            open={editModalOpen}
+            title="編輯日誌"
+            onCancel={() => setEditModalOpen(false)}
+            onOk={handleEditSave}
+            okText="儲存"
+            cancelText="取消"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <DatePicker
+                style={{ width: 160 }}
+                value={editForm.date ? dayjs(editForm.date) : undefined}
+                onChange={(d) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    date: d ? d.format('YYYY-MM-DD') : '',
+                  }))
+                }
+              />
+              <Input
+                style={{ width: 160 }}
+                placeholder="工作事項"
+                value={editForm.task}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, task: e.target.value }))
+                }
+              />
+              <Input
+                style={{ width: 260 }}
+                placeholder="作業內容"
+                value={editForm.content}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, content: e.target.value }))
+                }
+              />
+              <Input
+                type="number"
+                min={0.5}
+                step={0.5}
+                style={{ width: 100 }}
+                placeholder="工時"
+                value={editForm.hours}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, hours: e.target.value }))
+                }
+              />
+            </div>
+          </Modal>
         </div>
       </Spin>
     </div>
