@@ -33,8 +33,6 @@ export default function AuditPage() {
   const [form] = Form.useForm();
   const [departments, setDepartments] = useState<string[]>([]);
   const [depLoading, setDepLoading] = useState(false);
-  A;
-
   // 取得部門清單
   const fetchDepartments = async () => {
     setDepLoading(true);

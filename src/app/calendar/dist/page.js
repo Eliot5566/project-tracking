@@ -1,5 +1,16 @@
 'use client';
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -36,149 +47,131 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 exports.__esModule = true;
 var react_1 = require("react");
 var antd_1 = require("antd");
 var dayjs_1 = require("dayjs");
 var icons_1 = require("@ant-design/icons");
+var react_big_calendar_1 = require("react-big-calendar");
+require("react-big-calendar/lib/css/react-big-calendar.css");
+var localizer = react_big_calendar_1.dayjsLocalizer(dayjs_1["default"]);
+// 移除直接導入伺服器端 API 路由
+// import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../api/calendar/route';
 var RangePicker = antd_1.DatePicker.RangePicker;
-var CalendarPage = function () {
-    var _a = react_1.useState(true), loading = _a[0], setLoading = _a[1];
-    var _b = react_1.useState([]), events = _b[0], setEvents = _b[1];
-    var _c = react_1.useState(false), isModalVisible = _c[0], setIsModalVisible = _c[1];
+function CalendarPage() {
+    var _this = this;
+    var _a = react_1.useState([]), events = _a[0], setEvents = _a[1];
+    var _b = react_1.useState(false), loading = _b[0], setLoading = _b[1];
+    var _c = react_1.useState(false), modalVisible = _c[0], setModalVisible = _c[1];
     var _d = react_1.useState(null), editingEvent = _d[0], setEditingEvent = _d[1];
     var form = antd_1.Form.useForm()[0];
-    var fetchEvents = function () { return __awaiter(void 0, void 0, void 0, function () {
-        var response, result, error_1;
+    var _e = react_1.useState(new Date()), viewDate = _e[0], setViewDate = _e[1];
+    var _f = react_1.useState(react_big_calendar_1.Views.MONTH), view = _f[0], setView = _f[1];
+    // 使用 fetch API 替換直接導入的函數
+    var fetchCalendarEvents = react_1.useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
+        var response, result, mapped, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 3, 4, 5]);
                     setLoading(true);
-                    return [4 /*yield*/, fetch('/api/calendar')];
+                    _a.label = 1;
                 case 1:
+                    _a.trys.push([1, 4, 5, 6]);
+                    return [4 /*yield*/, fetch('/api/calendar')];
+                case 2:
                     response = _a.sent();
                     return [4 /*yield*/, response.json()];
-                case 2:
+                case 3:
                     result = _a.sent();
                     if (result.success) {
-                        setEvents(result.data);
+                        mapped = result.data.map(function (e) { return (__assign(__assign({}, e), { start: new Date(e.startDate), end: new Date(e.endDate) })); });
+                        setEvents(mapped);
                     }
                     else {
-                        antd_1.message.error('獲取行事曆事件失敗');
+                        antd_1.message.error('無法加載日曆事件');
                     }
-                    return [3 /*break*/, 5];
-                case 3:
-                    error_1 = _a.sent();
-                    console.error('獲取行事曆事件錯誤:', error_1);
-                    antd_1.message.error('獲取行事曆事件失敗');
-                    return [3 /*break*/, 5];
+                    return [3 /*break*/, 6];
                 case 4:
+                    error_1 = _a.sent();
+                    console.error('獲取事件發生錯誤:', error_1);
+                    antd_1.message.error('無法加載日曆事件');
+                    return [3 /*break*/, 6];
+                case 5:
                     setLoading(false);
                     return [7 /*endfinally*/];
-                case 5: return [2 /*return*/];
+                case 6: return [2 /*return*/];
             }
         });
-    }); };
-    react_1.useEffect(function () {
-        fetchEvents();
-    }, []);
-    var handleAddEvent = function (values) { return __awaiter(void 0, void 0, void 0, function () {
-        var _a, startDate, endDate, response, result, error_2;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+    }); }, []);
+    react_1.useEffect(function () { fetchCalendarEvents(); }, [fetchCalendarEvents]);
+    var handleSaveEvent = function (values) { return __awaiter(_this, void 0, void 0, function () {
+        var dateRange, eventData, startDate, endDate, eventPayload, response, result, error_2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
-                    _b.trys.push([0, 3, , 4]);
-                    _a = values.dateRange, startDate = _a[0], endDate = _a[1];
-                    return [4 /*yield*/, fetch('/api/calendar', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                title: values.title,
-                                description: values.description,
-                                type: values.type,
-                                startDate: startDate.format('YYYY-MM-DD HH:mm:ss'),
-                                endDate: endDate.format('YYYY-MM-DD HH:mm:ss')
-                            })
-                        })];
-                case 1:
-                    response = _b.sent();
-                    return [4 /*yield*/, response.json()];
-                case 2:
-                    result = _b.sent();
-                    if (result.success) {
-                        antd_1.message.success('新增事件成功');
-                        setIsModalVisible(false);
-                        form.resetFields();
-                        fetchEvents();
-                    }
-                    else {
-                        antd_1.message.error('新增事件失敗');
-                    }
-                    return [3 /*break*/, 4];
-                case 3:
-                    error_2 = _b.sent();
-                    console.error('新增事件錯誤:', error_2);
-                    antd_1.message.error('新增事件失敗');
-                    return [3 /*break*/, 4];
-                case 4: return [2 /*return*/];
-            }
-        });
-    }); };
-    var handleEditEvent = function (values) { return __awaiter(void 0, void 0, void 0, function () {
-        var _a, startDate, endDate, response, result, error_3;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
-                case 0:
-                    if (!editingEvent)
-                        return [2 /*return*/];
-                    _b.label = 1;
-                case 1:
-                    _b.trys.push([1, 4, , 5]);
-                    _a = values.dateRange, startDate = _a[0], endDate = _a[1];
-                    return [4 /*yield*/, fetch('/api/calendar', {
+                    _a.trys.push([0, 6, , 7]);
+                    dateRange = values.dateRange, eventData = __rest(values, ["dateRange"]);
+                    startDate = dateRange[0].format('YYYY-MM-DD');
+                    endDate = dateRange[1].format('YYYY-MM-DD');
+                    eventPayload = __assign(__assign({}, eventData), { startDate: startDate,
+                        endDate: endDate });
+                    response = void 0;
+                    if (!editingEvent) return [3 /*break*/, 2];
+                    return [4 /*yield*/, fetch("/api/calendar", {
                             method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                id: editingEvent.id,
-                                title: values.title,
-                                description: values.description,
-                                type: values.type,
-                                startDate: startDate.format('YYYY-MM-DD HH:mm:ss'),
-                                endDate: endDate.format('YYYY-MM-DD HH:mm:ss')
-                            })
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(__assign({ id: editingEvent.id }, eventPayload))
                         })];
-                case 2:
-                    response = _b.sent();
-                    return [4 /*yield*/, response.json()];
+                case 1:
+                    // 更新事件
+                    response = _a.sent();
+                    return [3 /*break*/, 4];
+                case 2: return [4 /*yield*/, fetch('/api/calendar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(eventPayload)
+                    })];
                 case 3:
-                    result = _b.sent();
+                    // 創建事件
+                    response = _a.sent();
+                    _a.label = 4;
+                case 4: return [4 /*yield*/, response.json()];
+                case 5:
+                    result = _a.sent();
                     if (result.success) {
-                        antd_1.message.success('更新事件成功');
-                        setIsModalVisible(false);
-                        setEditingEvent(null);
+                        antd_1.message.success(editingEvent ? '事件更新成功' : '事件創建成功');
+                        setModalVisible(false);
                         form.resetFields();
-                        fetchEvents();
+                        fetchCalendarEvents();
                     }
                     else {
-                        antd_1.message.error('更新事件失敗');
+                        antd_1.message.error(result.error || '保存事件失敗');
                     }
-                    return [3 /*break*/, 5];
-                case 4:
-                    error_3 = _b.sent();
-                    console.error('更新事件錯誤:', error_3);
-                    antd_1.message.error('更新事件失敗');
-                    return [3 /*break*/, 5];
-                case 5: return [2 /*return*/];
+                    return [3 /*break*/, 7];
+                case 6:
+                    error_2 = _a.sent();
+                    console.error('保存事件錯誤:', error_2);
+                    antd_1.message.error('保存事件失敗');
+                    return [3 /*break*/, 7];
+                case 7: return [2 /*return*/];
             }
         });
     }); };
-    var handleDeleteEvent = function (id) { return __awaiter(void 0, void 0, void 0, function () {
-        var response, result, error_4;
+    var handleDeleteEvent = function (id) { return __awaiter(_this, void 0, void 0, function () {
+        var response, result, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -192,133 +185,75 @@ var CalendarPage = function () {
                 case 2:
                     result = _a.sent();
                     if (result.success) {
-                        antd_1.message.success('刪除事件成功');
-                        fetchEvents();
+                        antd_1.message.success('事件刪除成功');
+                        fetchCalendarEvents();
                     }
                     else {
-                        antd_1.message.error('刪除事件失敗');
+                        antd_1.message.error(result.error || '刪除事件失敗');
                     }
                     return [3 /*break*/, 4];
                 case 3:
-                    error_4 = _a.sent();
-                    console.error('刪除事件錯誤:', error_4);
+                    error_3 = _a.sent();
+                    console.error('刪除事件錯誤:', error_3);
                     antd_1.message.error('刪除事件失敗');
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
             }
         });
     }); };
-    var getEventTypeColor = function (type) {
-        switch (type) {
-            case '會議':
-                return 'blue';
-            case '任務':
-                return 'green';
-            case '提醒':
-                return 'orange';
-            case '其他':
-                return 'gray';
-            default:
-                return 'default';
-        }
+    var eventPropGetter = function (event) {
+        var base = { style: {} };
+        var color = event.type === 'project' ? '#1677ff' : event.type === 'task' ? '#52c41a' : '#faad14';
+        base.style.backgroundColor = color;
+        base.style.border = 'none';
+        base.style.color = '#fff';
+        return base;
     };
-    var showEditModal = function (event) {
-        setEditingEvent(event);
+    var onSelectSlot = function (slotInfo) {
+        setEditingEvent(null);
+        form.resetFields();
         form.setFieldsValue({
-            title: event.title,
-            type: event.type,
-            dateRange: [
-                dayjs_1["default"](event.startDate),
-                dayjs_1["default"](event.endDate)
-            ],
-            description: event.description
+            dateRange: [dayjs_1["default"](slotInfo.start), dayjs_1["default"](slotInfo.end)]
         });
-        setIsModalVisible(true);
+        setModalVisible(true);
     };
-    var columns = [
-        {
-            title: '事件標題',
-            dataIndex: 'title',
-            key: 'title',
-            width: 200
-        },
-        {
-            title: '類型',
-            dataIndex: 'type',
-            key: 'type',
-            width: 100,
-            render: function (type) { return (React.createElement(antd_1.Tag, { color: getEventTypeColor(type) }, type)); }
-        },
-        {
-            title: '開始時間',
-            dataIndex: 'startDate',
-            key: 'startDate',
-            width: 180,
-            render: function (date) { return dayjs_1["default"](date).format('YYYY-MM-DD HH:mm'); }
-        },
-        {
-            title: '結束時間',
-            dataIndex: 'endDate',
-            key: 'endDate',
-            width: 180,
-            render: function (date) { return dayjs_1["default"](date).format('YYYY-MM-DD HH:mm'); }
-        },
-        {
-            title: '關聯專案',
-            dataIndex: 'projectName',
-            key: 'projectName',
-            width: 150
-        },
-        {
-            title: '關聯任務',
-            dataIndex: 'taskName',
-            key: 'taskName',
-            width: 150
-        },
-        {
-            title: '描述',
-            dataIndex: 'description',
-            key: 'description',
-            ellipsis: true
-        },
-        {
-            title: '操作',
-            key: 'action',
-            width: 120,
-            render: function (_, record) { return (React.createElement("div", { className: "flex gap-2" },
-                React.createElement(antd_1.Button, { type: "link", icon: React.createElement(icons_1.EditOutlined, null), onClick: function () { return showEditModal(record); } }, "\u7DE8\u8F2F"),
-                React.createElement(antd_1.Popconfirm, { title: "\u78BA\u5B9A\u8981\u522A\u9664\u9019\u500B\u4E8B\u4EF6\u55CE\uFF1F", onConfirm: function () { return handleDeleteEvent(record.id); }, okText: "\u78BA\u5B9A", cancelText: "\u53D6\u6D88" },
-                    React.createElement(antd_1.Button, { type: "link", danger: true, icon: React.createElement(icons_1.DeleteOutlined, null) }, "\u522A\u9664")))); }
-        },
-    ];
-    return (React.createElement("div", { className: "p-6" },
-        React.createElement(antd_1.Card, { title: "\u884C\u4E8B\u66C6", className: "mb-6", extra: React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () {
-                    setEditingEvent(null);
-                    form.resetFields();
-                    setIsModalVisible(true);
-                } }, "\u65B0\u589E\u4E8B\u4EF6") },
-            React.createElement(antd_1.Table, { columns: columns, dataSource: events, rowKey: "id", loading: loading, pagination: {
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showTotal: function (total) { return "\u5171 " + total + " \u500B\u4E8B\u4EF6"; }
-                }, scroll: { x: 1000 } })),
-        React.createElement(antd_1.Modal, { title: editingEvent ? '編輯事件' : '新增事件', open: isModalVisible, onCancel: function () {
-                setIsModalVisible(false);
-                setEditingEvent(null);
-                form.resetFields();
-            }, onOk: function () { return form.submit(); } },
-            React.createElement(antd_1.Form, { form: form, layout: "vertical", onFinish: editingEvent ? handleEditEvent : handleAddEvent },
-                React.createElement(antd_1.Form.Item, { name: "title", label: "\u4E8B\u4EF6\u6A19\u984C", rules: [{ required: true, message: '請輸入事件標題' }] },
-                    React.createElement(antd_1.Input, null)),
-                React.createElement(antd_1.Form.Item, { name: "type", label: "\u4E8B\u4EF6\u985E\u578B", rules: [{ required: true, message: '請選擇事件類型' }] },
-                    React.createElement(antd_1.Select, null,
-                        React.createElement(antd_1.Select.Option, { value: "\u6703\u8B70" }, "\u6703\u8B70"),
-                        React.createElement(antd_1.Select.Option, { value: "\u4EFB\u52D9" }, "\u4EFB\u52D9"),
-                        React.createElement(antd_1.Select.Option, { value: "\u63D0\u9192" }, "\u63D0\u9192"),
-                        React.createElement(antd_1.Select.Option, { value: "\u5176\u4ED6" }, "\u5176\u4ED6"))),
-                React.createElement(antd_1.Form.Item, { name: "dateRange", label: "\u6642\u9593\u7BC4\u570D", rules: [{ required: true, message: '請選擇時間範圍' }] },
-                    React.createElement(RangePicker, { showTime: true, format: "YYYY-MM-DD HH:mm:ss" })),
-                React.createElement(antd_1.Form.Item, { name: "description", label: "\u4E8B\u4EF6\u63CF\u8FF0" },
-                    React.createElement(antd_1.Input.TextArea, { rows: 4 }))))));
-};
+    var onSelectEvent = function (e) {
+        setEditingEvent(e);
+        form.resetFields();
+        form.setFieldsValue({
+            title: e.title,
+            description: e.description,
+            type: e.type,
+            dateRange: [dayjs_1["default"](e.startDate), dayjs_1["default"](e.endDate)]
+        });
+        setModalVisible(true);
+    };
+    return (React.createElement("div", { style: { padding: '24px' } },
+        React.createElement(antd_1.Card, { title: "\u884C\u4E8B\u66C6 (\u6708/\u9031/\u65E5)", extra: React.createElement(antd_1.Space, null,
+                React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () {
+                        setEditingEvent(null);
+                        form.resetFields();
+                        setModalVisible(true);
+                    } }, "\u65B0\u589E\u4E8B\u4EF6"),
+                React.createElement(antd_1.Select, { size: "small", value: view, onChange: function (v) { return setView(v); }, options: [{ value: react_big_calendar_1.Views.MONTH, label: '月' }, { value: react_big_calendar_1.Views.WEEK, label: '週' }, { value: react_big_calendar_1.Views.DAY, label: '日' }] })) },
+            React.createElement("div", { style: { height: 600 } },
+                React.createElement(react_big_calendar_1.Calendar, { localizer: localizer, events: events, startAccessor: "start", endAccessor: "end", selectable: true, popup: true, view: view, onView: function (v) { return setView(v); }, date: viewDate, onNavigate: function (d) { return setViewDate(d); }, onSelectSlot: onSelectSlot, onSelectEvent: onSelectEvent, eventPropGetter: eventPropGetter, messages: { today: '今天', previous: '上一頁', next: '下一頁', month: '月', week: '週', day: '日', agenda: '列表' } }))),
+        React.createElement(antd_1.Modal, { title: editingEvent ? '編輯事件' : '新增事件', open: modalVisible, onCancel: function () { return setModalVisible(false); }, footer: null, destroyOnClose: true },
+            React.createElement(antd_1.Form, { form: form, layout: "vertical", onFinish: handleSaveEvent },
+                React.createElement(antd_1.Form.Item, { name: "title", label: "\u6A19\u984C", rules: [{ required: true, message: '請輸入標題' }] },
+                    React.createElement(antd_1.Input, { placeholder: "\u8F38\u5165\u4E8B\u4EF6\u6A19\u984C" })),
+                React.createElement(antd_1.Form.Item, { name: "description", label: "\u63CF\u8FF0" },
+                    React.createElement(antd_1.Input.TextArea, { placeholder: "\u8F38\u5165\u4E8B\u4EF6\u63CF\u8FF0" })),
+                React.createElement(antd_1.Form.Item, { name: "dateRange", label: "\u65E5\u671F\u7BC4\u570D", rules: [{ required: true, message: '請選擇日期範圍' }] },
+                    React.createElement(RangePicker, null)),
+                React.createElement(antd_1.Form.Item, { name: "type", label: "\u985E\u578B", rules: [{ required: true, message: '請選擇類型' }] },
+                    React.createElement(antd_1.Select, { placeholder: "\u9078\u64C7\u4E8B\u4EF6\u985E\u578B" },
+                        React.createElement(antd_1.Select.Option, { value: "project" }, "\u5C08\u6848"),
+                        React.createElement(antd_1.Select.Option, { value: "task" }, "\u4EFB\u52D9"),
+                        React.createElement(antd_1.Select.Option, { value: "other" }, "\u5176\u4ED6"))),
+                editingEvent && (React.createElement(antd_1.Popconfirm, { title: "\u522A\u9664\u6B64\u4E8B\u4EF6?", onConfirm: function () { return handleDeleteEvent(editingEvent.id); } },
+                    React.createElement(antd_1.Button, { danger: true, icon: React.createElement(icons_1.DeleteOutlined, null) }, "\u522A\u9664"))),
+                React.createElement(antd_1.Form.Item, null,
+                    React.createElement(antd_1.Button, { type: "primary", htmlType: "submit", block: true }, "\u4FDD\u5B58"))))));
+}
 exports["default"] = CalendarPage;

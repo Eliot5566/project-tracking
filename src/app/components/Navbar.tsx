@@ -1,7 +1,11 @@
 'use client';
 
 import { Layout, Menu, Button, Dropdown, Space } from 'antd';
-import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import {
+  UserOutlined,
+  LogoutOutlined,
+  SafetyCertificateOutlined,
+} from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import GlobalReminders from './GlobalReminders'; // 假設這是全域提醒組件的路徑
@@ -20,10 +24,10 @@ const { Header } = Layout;
 
 interface NavbarProps {
   darkMode: boolean;
-  setDarkMode: (value: boolean) => void;
+  // 移除 setDarkMode 以避免序列化問題
 }
 
-export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
+export default function Navbar({ darkMode }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -83,12 +87,11 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       icon: <TeamOutlined />,
       label: '稽核專區',
     },
-
-    // {
-    //   key: '/notifications',
-    //   icon: <BellOutlined />,
-    //   label: '通知'
-    // }
+    {
+      key: '/settings/security',
+      icon: <SafetyCertificateOutlined />,
+      label: '安全設定',
+    },
   ];
 
   // 取得登入者資訊
@@ -108,11 +111,20 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
   }, []);
 
   // 登出
-  const handleLogout = () => {
-    localStorage.removeItem('isLogin');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.warn('logout api failed', e);
+    }
+    try {
+      localStorage.removeItem('isLogin');
+      localStorage.removeItem('user');
+    } catch {}
     router.replace('/login');
-    window.location.reload();
   };
 
   const userMenu = (

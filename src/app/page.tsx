@@ -1,8 +1,12 @@
-"use client";
-
+'use client';
 
 import { Row, Col, Card, Typography, Button } from 'antd';
-import { ProjectOutlined, LineChartOutlined, TeamOutlined, FileOutlined } from '@ant-design/icons';
+import {
+  ProjectOutlined,
+  LineChartOutlined,
+  TeamOutlined,
+  FileOutlined,
+} from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -12,26 +16,26 @@ const features = [
   {
     title: '任務管理',
     description: '輕鬆追蹤和管理專案中的各項任務，提高工作效率。',
-    icon: <ProjectOutlined style={{ fontSize: 40 }} />, 
-    path: '/task'
+    icon: <ProjectOutlined style={{ fontSize: 40 }} />,
+    path: '/task',
   },
   {
     title: '進度追蹤',
     description: '即時查看專案進度，確保按時完成目標。',
-    icon: <LineChartOutlined style={{ fontSize: 40 }} />, 
-    path: '/progress'
+    icon: <LineChartOutlined style={{ fontSize: 40 }} />,
+    path: '/progress',
   },
   // {
   //   title: '團隊管理',
   //   description: '管理團隊成員資料。',
-  //   icon: <TeamOutlined style={{ fontSize: 40 }} />, 
+  //   icon: <TeamOutlined style={{ fontSize: 40 }} />,
   //   path: '/team'
   // },
   {
     title: '文件管理',
     description: '上傳和管理專案文件，追蹤歷史版本。',
-    icon: <FileOutlined style={{ fontSize: 40 }} />, 
-    path: '/documents'
+    icon: <FileOutlined style={{ fontSize: 40 }} />,
+    path: '/documents',
   },
 ];
 
@@ -45,6 +49,19 @@ export default function Home() {
       }
     }
   }, []);
+
+  // 登出動作封裝，供按鈕呼叫
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      // ignore network errors; still clear local state
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('isLogin');
+    }
+    router.replace('/login');
+  };
 
   return (
     <div
@@ -73,7 +90,7 @@ export default function Home() {
           level={2}
           style={{
             textAlign: 'center',
-            marginBottom: '2.5rem',
+            marginBottom: '0.75rem',
             fontWeight: 800,
             color: '#222',
             letterSpacing: 2,
@@ -82,6 +99,29 @@ export default function Home() {
         >
           歡迎使用專案追蹤系統
         </Title>
+        {/* 行動版暫時替代 Navbar 的登出按鈕 */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '1.75rem',
+          }}
+        >
+          <Button
+            danger
+            onClick={handleLogout}
+            size="large"
+            style={{
+              borderRadius: 28,
+              fontWeight: 600,
+              padding: '0 2.2em',
+              boxShadow: '0 2px 8px #ff4d4f33',
+              width: 'auto',
+            }}
+          >
+            登出
+          </Button>
+        </div>
 
         <Row gutter={[32, 32]} justify="center" align="middle">
           {features.map((feature) => (
@@ -113,7 +153,8 @@ export default function Home() {
                   style={{
                     color: '#1890ff',
                     marginBottom: '1.5rem',
-                    background: 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
+                    background:
+                      'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
                     borderRadius: '50%',
                     width: 64,
                     height: 64,
@@ -122,15 +163,24 @@ export default function Home() {
                     justifyContent: 'center',
                     boxShadow: '0 2px 8px #b3d1ff33',
                     // transform: 'scale(1)',
-                  
                   }}
                 >
                   {feature.icon}
                 </div>
-                <Title level={4} style={{ marginBottom: '1rem', fontWeight: 700, color: '#222' }}>
+                <Title
+                  level={4}
+                  style={{
+                    marginBottom: '1rem',
+                    fontWeight: 700,
+                    color: '#222',
+                  }}
+                >
                   {feature.title}
                 </Title>
-                <Text type="secondary" style={{ marginBottom: '2rem', fontSize: 16, color: '#555' }}>
+                <Text
+                  type="secondary"
+                  style={{ marginBottom: '2rem', fontSize: 16, color: '#555' }}
+                >
                   {feature.description}
                 </Text>
                 <Button

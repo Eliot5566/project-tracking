@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Button, Modal, Form, Input, DatePicker, Select, message, Popconfirm } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { useEffect, useState, useCallback } from 'react';
+import { Card, Button, Modal, Form, Input, DatePicker, Select, message, Popconfirm, Tag, Space } from 'antd';
 import dayjs from 'dayjs';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Calendar, dayjsLocalizer, Views } from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+const localizer = dayjsLocalizer(dayjs as any);
 
 // 移除直接導入伺服器端 API 路由
 // import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../api/calendar/route';
 
 const { RangePicker } = DatePicker;
 
-interface CalendarEvent {
+interface CalendarEventDTO {
   id: number;
   title: string;
   description: string;
@@ -26,6 +29,11 @@ interface CalendarEvent {
   updatedAt: string;
 }
 
+interface CalendarEventUI extends CalendarEventDTO {
+  start: Date;
+  end: Date;
+}
+
 interface EventFormValues {
   title: string;
   type: string;
@@ -34,21 +42,28 @@ interface EventFormValues {
 }
 
 export default function CalendarPage() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [events, setEvents] = useState<CalendarEventUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalendarEventUI | null>(null);
   const [form] = Form.useForm();
+  const [viewDate, setViewDate] = useState(new Date());
+  const [view, setView] = useState<any>(Views.MONTH);
 
   // 使用 fetch API 替換直接導入的函數
-  const fetchCalendarEvents = async () => {
+  const fetchCalendarEvents = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/calendar');
       const result = await response.json();
       
       if (result.success) {
-        setEvents(result.data);
+        const mapped: CalendarEventUI[] = result.data.map((e: CalendarEventDTO) => ({
+          ...e,
+          start: new Date(e.startDate),
+            end: new Date(e.endDate)
+        }));
+        setEvents(mapped);
       } else {
         message.error('無法加載日曆事件');
       }
@@ -58,11 +73,9 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchCalendarEvents();
   }, []);
+
+  useEffect(() => { fetchCalendarEvents(); }, [fetchCalendarEvents]);
 
   const handleSaveEvent = async (values: any) => {
     try {
@@ -80,12 +93,10 @@ export default function CalendarPage() {
       
       if (editingEvent) {
         // 更新事件
-        response = await fetch(`/api/calendar?id=${editingEvent.id}`, {
+        response = await fetch(`/api/calendar`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(eventPayload)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingEvent.id, ...eventPayload })
         });
       } else {
         // 創建事件
@@ -134,91 +145,81 @@ export default function CalendarPage() {
     }
   };
 
-  const columns: ColumnsType<CalendarEvent> = [
-    {
-      title: '標題',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
-    },
-    {
-      title: '開始日期',
-      dataIndex: 'startDate',
-      key: 'startDate',
-      render: (date) => dayjs(date).format('YYYY-MM-DD'),
-    },
-    {
-      title: '結束日期',
-      dataIndex: 'endDate',
-      key: 'endDate',
-      render: (date) => dayjs(date).format('YYYY-MM-DD'),
-    },
-    {
-      title: '類型',
-      dataIndex: 'type',
-      key: 'type',
-      render: (type) => <Tag color={type === 'project' ? 'blue' : 'green'}>{type}</Tag>,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <div>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setEditingEvent(record);
-              form.setFieldsValue(record);
-              setModalVisible(true);
-            }}
-          />
-          <Popconfirm
-            title="確定刪除此事件嗎？"
-            onConfirm={() => handleDeleteEvent(record.id)}
-          >
-            <Button icon={<DeleteOutlined />} danger />
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ];
+  const eventPropGetter = (event: CalendarEventUI) => {
+    const base: any = { style: {} };
+    const color = event.type === 'project' ? '#1677ff' : event.type === 'task' ? '#52c41a' : '#faad14';
+    base.style.backgroundColor = color;
+    base.style.border = 'none';
+    base.style.color = '#fff';
+    return base;
+  };
+
+  const onSelectSlot = (slotInfo: any) => {
+    setEditingEvent(null);
+    form.resetFields();
+    form.setFieldsValue({
+      dateRange: [dayjs(slotInfo.start), dayjs(slotInfo.end)],
+    });
+    setModalVisible(true);
+  };
+
+  const onSelectEvent = (e: CalendarEventUI) => {
+    setEditingEvent(e);
+    form.resetFields();
+    form.setFieldsValue({
+      title: e.title,
+      description: e.description,
+      type: e.type,
+      dateRange: [dayjs(e.startDate), dayjs(e.endDate)]
+    });
+    setModalVisible(true);
+  };
 
   return (
     <div style={{ padding: '24px' }}>
       <Card
-        title="日曆事件管理"
+        title="行事曆 (月/週/日)"
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingEvent(null);
-              form.resetFields();
-              setModalVisible(true);
-            }}
-          >
-            添加事件
-          </Button>
+          <Space>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingEvent(null);
+                form.resetFields();
+                setModalVisible(true);
+              }}
+            >新增事件</Button>
+            <Select
+              size="small"
+              value={view}
+              onChange={(v) => setView(v)}
+              options={[{ value: Views.MONTH, label: '月' }, { value: Views.WEEK, label: '週' }, { value: Views.DAY, label: '日' }]}
+            />
+          </Space>
         }
       >
-        <Table
-          columns={columns}
-          dataSource={events}
-          rowKey="id"
-          loading={loading}
-        />
+        <div style={{ height: 600 }}>
+          <Calendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            selectable
+            popup
+            view={view}
+            onView={(v) => setView(v)}
+            date={viewDate}
+            onNavigate={(d) => setViewDate(d)}
+            onSelectSlot={onSelectSlot}
+            onSelectEvent={onSelectEvent}
+            eventPropGetter={eventPropGetter}
+            messages={{ today: '今天', previous: '上一頁', next: '下一頁', month: '月', week: '週', day: '日', agenda: '列表' }}
+          />
+        </div>
       </Card>
 
-      <Modal
-        title={editingEvent ? '編輯事件' : '添加事件'}
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={null}
-      >
+      <Modal title={editingEvent ? '編輯事件' : '新增事件'} open={modalVisible} onCancel={() => setModalVisible(false)} footer={null} destroyOnClose>
         <Form
           form={form}
           layout="vertical"
@@ -252,8 +253,14 @@ export default function CalendarPage() {
             <Select placeholder="選擇事件類型">
               <Select.Option value="project">專案</Select.Option>
               <Select.Option value="task">任務</Select.Option>
+              <Select.Option value="other">其他</Select.Option>
             </Select>
           </Form.Item>
+          {editingEvent && (
+            <Popconfirm title="刪除此事件?" onConfirm={() => handleDeleteEvent(editingEvent.id)}>
+              <Button danger icon={<DeleteOutlined />}>刪除</Button>
+            </Popconfirm>
+          )}
           <Form.Item>
             <Button type="primary" htmlType="submit" block>
               保存
