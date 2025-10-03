@@ -7,17 +7,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "init-db": "node scripts/init-db.js"
+    "init-db": "node scripts/init-db.js",
+    "dev:ngrok": "concurrently \"next dev\" \"ngrok http 3000\""
   },
   "dependencies": {
     "@ant-design/compatible": "^5.1.4",
     "@ant-design/icons": "^5.3.0",
+    "@simplewebauthn/server": "^10.0.0",
     "antd": "^5.14.1",
     "dayjs": "^1.11.10",
     "mssql": "^10.0.2",
     "next": "14.1.0",
     "react": "^18.2.0",
-    "react-big-calendar": "^1.18.0",
+    "react-big-calendar": "^1.19.4",
     "react-dom": "^18.2.0",
     "tedious": "^18.0.0"
   },
@@ -26,6 +28,7 @@
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
     "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.1.0",
     "postcss": "^8.4.35",

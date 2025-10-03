@@ -1,6 +1,17 @@
-"use client";
+'use client';
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Input, DatePicker, Select, message, Spin } from 'antd';
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Select,
+  message,
+  Spin,
+} from 'antd';
 import dayjs from 'dayjs';
 
 // interface AuditItem 用來定義稽核項目的資料結構
@@ -22,8 +33,6 @@ export default function AuditPage() {
   const [form] = Form.useForm();
   const [departments, setDepartments] = useState<string[]>([]);
   const [depLoading, setDepLoading] = useState(false);
-
-  
   // 取得部門清單
   const fetchDepartments = async () => {
     setDepLoading(true);
@@ -92,17 +101,36 @@ export default function AuditPage() {
 
   const columns = [
     { title: '稽核部門', dataIndex: 'department', key: 'department' },
-    { title: '起始時間', dataIndex: 'startDate', key: 'startDate', render: (d: string) => dayjs(d).format('YYYY-MM-DD') },
-    { title: '結束時間', dataIndex: 'endDate', key: 'endDate', render: (d: string) => dayjs(d).format('YYYY-MM-DD') },
+    {
+      title: '起始時間',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      render: (d: string) => dayjs(d).format('YYYY-MM-DD'),
+    },
+    {
+      title: '結束時間',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      render: (d: string) => dayjs(d).format('YYYY-MM-DD'),
+    },
     { title: '稽核內容', dataIndex: 'content', key: 'content' },
-    { title: '建立時間', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm') },
+    {
+      title: '建立時間',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (d: string) => dayjs(d).format('YYYY-MM-DD HH:mm'),
+    },
   ];
 
   return (
     <div style={{ padding: 24 }}>
       <Card
         title="稽核專區"
-        extra={<Button type="primary" onClick={() => setModalVisible(true)}>新增稽核項目</Button>}
+        extra={
+          <Button type="primary" onClick={() => setModalVisible(true)}>
+            新增稽核項目
+          </Button>
+        }
       >
         <Table
           columns={columns}
@@ -119,26 +147,52 @@ export default function AuditPage() {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleAddAudit}>
-          <Form.Item name="department" label="稽核部門" rules={[{ required: true, message: '請選擇部門' }]}> 
+          <Form.Item
+            name="department"
+            label="稽核部門"
+            rules={[{ required: true, message: '請選擇部門' }]}
+          >
             <Select placeholder="選擇部門" loading={depLoading}>
-              {departments.map(dep => (
-                <Select.Option key={dep} value={dep}>{dep}</Select.Option>
-                
+              {departments.map((dep) => (
+                <Select.Option key={dep} value={dep}>
+                  {dep}
+                </Select.Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="startDate" label="起始時間" rules={[{ required: true, message: '請選擇起始時間' }]}> 
+          <Form.Item
+            name="startDate"
+            label="起始時間"
+            rules={[{ required: true, message: '請選擇起始時間' }]}
+          >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="endDate" label="結束時間" rules={[{ required: true, message: '請選擇結束時間' }]}> 
+          <Form.Item
+            name="endDate"
+            label="結束時間"
+            rules={[{ required: true, message: '請選擇結束時間' }]}
+          >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="content" label="稽核內容" rules={[{ required: true, message: '請輸入內容' }]}> 
+          <Form.Item
+            name="content"
+            label="稽核內容"
+            rules={[{ required: true, message: '請輸入內容' }]}
+          >
             <Input.TextArea rows={3} />
           </Form.Item>
           <Form.Item>
-            <Button type="default" onClick={() => setModalVisible(false)} style={{ marginRight: 8 }} block>取消</Button>
-            <Button type="primary" htmlType="submit" block>確定</Button>
+            <Button
+              type="default"
+              onClick={() => setModalVisible(false)}
+              style={{ marginRight: 8 }}
+              block
+            >
+              取消
+            </Button>
+            <Button type="primary" htmlType="submit" block>
+              確定
+            </Button>
           </Form.Item>
         </Form>
       </Modal>
