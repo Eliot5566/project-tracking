@@ -32,7 +32,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
     >
       <html lang="zh-TW">
         <body className={inter.className}>
-          {isLogin === true && <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />}
+          {isLogin === true && <Navbar darkMode={darkMode} />}
           <Layout>{children}</Layout>
         </body>
       </html>

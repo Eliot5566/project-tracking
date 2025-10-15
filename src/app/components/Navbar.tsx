@@ -1,7 +1,7 @@
 'use client';
 
 import { Layout, Menu, Button, Dropdown, Space } from 'antd';
-import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import GlobalReminders from './GlobalReminders'; // 假設這是全域提醒組件的路徑
@@ -20,10 +20,9 @@ const { Header } = Layout;
 
 interface NavbarProps {
   darkMode: boolean;
-  setDarkMode: (value: boolean) => void;
 }
 
-export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
+export default function Navbar({ darkMode }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -77,6 +76,11 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
       key: '/documents',
       icon: <ProjectOutlined />,
       label: '文件管理',
+    },
+    {
+      key: '/notes',
+      icon: <FileTextOutlined />,
+      label: '會議記錄',
     },
     {
       key: '/audit',
