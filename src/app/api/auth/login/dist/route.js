@@ -39,11 +39,13 @@ exports.__esModule = true;
 exports.POST = void 0;
 var server_1 = require("next/server");
 var db_1 = require("@/lib/db");
-var jwt_1 = require("@/lib/jwt");
 var mssql_1 = require("mssql");
+if (typeof window !== 'undefined') {
+    throw new Error('`auth/login/route.ts` should only be used on the server side.');
+}
 function POST(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var _a, employeeId, password, pool, result, user, token, error_1;
+        var _a, employeeId, password, pool, result, user_1, teamMemberResult, teamMemberId, response, cookieOptions, error_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -54,7 +56,7 @@ function POST(request) {
                     if (!employeeId || !password) {
                         return [2 /*return*/, server_1.NextResponse.json({ success: false, error: '請輸入工號和密碼' }, { status: 400 })];
                     }
-                    return [4 /*yield*/, db_1.connect()];
+                    return [4 /*yield*/, db_1.getConnection()];
                 case 2:
                     pool = _b.sent();
                     return [4 /*yield*/, pool.request()
@@ -66,40 +68,55 @@ function POST(request) {
                     if (result.recordset.length === 0) {
                         return [2 /*return*/, server_1.NextResponse.json({ success: false, error: '工號或密碼錯誤' }, { status: 401 })];
                     }
-                    user = result.recordset[0];
+                    user_1 = result.recordset[0];
                     // 檢查是否已離職
-                    if (user.resignationDate) {
+                    if (user_1.resignationDate) {
                         return [2 /*return*/, server_1.NextResponse.json({ success: false, error: '該帳號已離職' }, { status: 403 })];
                     }
+                    return [4 /*yield*/, pool.request()
+                            .input('employeeId', mssql_1["default"].NVarChar, employeeId)
+                            .query("\n        SELECT TOP 1 id FROM [ProjectTracking].[dbo].[TeamMembers] WHERE employeeId = @employeeId\n      ")];
+                case 4:
+                    teamMemberResult = _b.sent();
+                    teamMemberId = teamMemberResult.recordset.length > 0 ? teamMemberResult.recordset[0].id : null;
                     // 更新登入資訊
                     return [4 /*yield*/, pool.request()
                             .input('employeeId', mssql_1["default"].NVarChar, employeeId)
                             .query("\n        UPDATE [JCYDB].[dbo].[\u4EBA\u54E1\u5C0D\u7167\u6A94]\n        SET \n          [\u767B\u5165\u6B21\u6578] = [\u767B\u5165\u6B21\u6578] + 1,\n          [\u6700\u5F8C\u767B\u5165\u6642\u9593] = GETDATE()\n        WHERE [\u5DE5\u865F] = @employeeId\n      ")];
-                case 4:
+                case 5:
                     // 更新登入資訊
                     _b.sent();
-                    return [4 /*yield*/, jwt_1.jwtSign({
-                            employeeId: user.employeeId,
-                            name: user.name,
-                            department: user.departmentName,
-                            position: user.position,
-                            role: user.position.includes('主管') ? 'admin' : 'user'
-                        })];
-                case 5:
-                    token = _b.sent();
-                    return [2 /*return*/, server_1.NextResponse.json({
-                            success: true,
-                            data: {
-                                token: token,
-                                user: {
-                                    employeeId: user.employeeId,
-                                    name: user.name,
-                                    department: user.departmentName,
-                                    position: user.position,
-                                    role: user.position.includes('主管') ? 'admin' : 'user'
-                                }
+                    response = server_1.NextResponse.json({
+                        success: true,
+                        data: {
+                            user: {
+                                employeeId: user_1.employeeId,
+                                name: user_1.name,
+                                department: user_1.departmentName,
+                                position: user_1.position,
+                                role: ['經理', '副理', '總經理', '董事長', '課長'].some(function (pos) {
+                                    return user_1.position.includes(pos);
+                                }) || user_1.departmentCode.startsWith('IT')
+                                    ? 'admin'
+                                    : 'user',
+                                email: user_1.email,
+                                teamMemberId: teamMemberId
                             }
-                        })];
+                        }
+                    });
+                    // 設置用於後端 API 授權的 cookie（讓 /api/worklogs 能取得登入者）
+                    if (teamMemberId) {
+                        cookieOptions = {
+                            httpOnly: true,
+                            sameSite: 'lax',
+                            path: '/',
+                            maxAge: 7 * 24 * 60 * 360
+                        };
+                        response.cookies.set('teamMemberId', String(teamMemberId), cookieOptions);
+                        // 兼容舊版 userId 名稱
+                        response.cookies.set('userId', String(teamMemberId), cookieOptions);
+                    }
+                    return [2 /*return*/, response];
                 case 6:
                     error_1 = _b.sent();
                     console.error('登入錯誤:', error_1);

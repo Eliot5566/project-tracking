@@ -4,20 +4,12 @@ import { query } from '@/lib/db';
 // 支援 GET（查詢）、POST（新增）、PUT（編輯）、DELETE（刪除）
 export async function GET() {
   try {
-    const tasksRaw = await query(`
+    const tasks = await query(`
       SELECT id, title, startDate, dueDate FROM Tasks
     `);
-    const projectsRaw = await query(`
+    const projects = await query(`
       SELECT id, name, startDate, endDate FROM Projects
     `);
-
-    // 將各種可能的回傳型別（array 或 mssql 的 recordset）正規化為陣列
-    const tasks: any[] = Array.isArray(tasksRaw)
-      ? tasksRaw
-      : (Array.isArray((tasksRaw as any)?.recordset) ? (tasksRaw as any).recordset : []);
-    const projects: any[] = Array.isArray(projectsRaw)
-      ? projectsRaw
-      : (Array.isArray((projectsRaw as any)?.recordset) ? (projectsRaw as any).recordset : []);
 
     const events = [
       ...tasks.map((t: any) => ({

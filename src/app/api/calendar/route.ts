@@ -70,8 +70,7 @@ export async function GET(request: Request) {
 
     sqlQuery += ' ORDER BY e.startDate ASC';
 
-  const raw = await query<CalendarEvent[] | any>(sqlQuery, params);
-  const events: CalendarEvent[] = Array.isArray(raw) ? raw : (Array.isArray((raw as any)?.recordset) ? (raw as any).recordset : []);
+    const events = await query<CalendarEvent[]>(sqlQuery, params);
 
     return NextResponse.json({
       success: true,
@@ -111,7 +110,7 @@ export async function POST(request: Request) {
       SELECT SCOPE_IDENTITY() as id;
     `;
 
-    const insertResult: any = await query<any>(sqlQuery, [
+    const result = await query<{ id: number }[]>(sqlQuery, [
       title,
       description || '',
       startDate,
@@ -121,21 +120,7 @@ export async function POST(request: Request) {
       taskId || null
     ]);
 
-    // 從可能的回傳型別安全地取得新 ID（recordset 或 array）
-    let insertedId: number | undefined;
-    if (Array.isArray(insertResult)) {
-      insertedId = insertResult[0]?.id;
-    } else if (insertResult && Array.isArray(insertResult.recordset)) {
-      insertedId = insertResult.recordset[0]?.id;
-    } else if (insertResult && typeof insertResult.id === 'number') {
-      insertedId = insertResult.id;
-    }
-
-    if (!insertedId) {
-      return NextResponse.json({ success: false, error: '無法取得新事件 ID' }, { status: 500 });
-    }
-
-    const newEventRaw = await query<CalendarEvent[] | any>(
+    const newEvent = await query<CalendarEvent[]>(
       `SELECT 
         e.id,
         e.title,
@@ -152,14 +137,13 @@ export async function POST(request: Request) {
        FROM CalendarEvents e
        LEFT JOIN Projects p ON e.projectId = p.id
        LEFT JOIN Tasks t ON e.taskId = t.id
-  WHERE e.id = @param0`,
-      [insertedId]
+       WHERE e.id = @param0`,
+      [result[0].id]
     );
-    const newEventArr: CalendarEvent[] = Array.isArray(newEventRaw) ? newEventRaw : (Array.isArray((newEventRaw as any)?.recordset) ? (newEventRaw as any).recordset : []);
 
     return NextResponse.json({
       success: true,
-      data: newEventArr[0]
+      data: newEvent[0]
     });
   } catch (error) {
     console.error('創建錯誤:', error);
@@ -214,7 +198,7 @@ export async function PUT(request: Request) {
       WHERE e.id = @param7;
     `;
 
-  const updatedEventRaw = await query<CalendarEvent[] | any>(sqlQuery, [
+    const updatedEvent = await query<CalendarEvent[]>(sqlQuery, [
       title,
       description || '',
       startDate,
@@ -224,9 +208,8 @@ export async function PUT(request: Request) {
       taskId || null,
       id
     ]);
-  const updatedEvent: CalendarEvent[] = Array.isArray(updatedEventRaw) ? updatedEventRaw : (Array.isArray((updatedEventRaw as any)?.recordset) ? (updatedEventRaw as any).recordset : []);
 
-  if (!updatedEvent || updatedEvent.length === 0) {
+    if (updatedEvent.length === 0) {
       return NextResponse.json({
         success: false,
         error: '找不到指定的事件'
@@ -259,7 +242,7 @@ export async function DELETE(request: Request) {
     }
 
     // 先獲取要刪除的事件資訊
-  const eventToDeleteRaw = await query<CalendarEvent[] | any>(
+    const eventToDelete = await query<CalendarEvent[]>(
       `SELECT 
         e.id,
         e.title,
@@ -279,9 +262,8 @@ export async function DELETE(request: Request) {
        WHERE e.id = @param0`,
       [id]
     );
-  const eventToDelete: CalendarEvent[] = Array.isArray(eventToDeleteRaw) ? eventToDeleteRaw : (Array.isArray((eventToDeleteRaw as any)?.recordset) ? (eventToDeleteRaw as any).recordset : []);
 
-  if (!eventToDelete || eventToDelete.length === 0) {
+    if (eventToDelete.length === 0) {
       return NextResponse.json({
         success: false,
         error: '找不到指定的事件'

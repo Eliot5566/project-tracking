@@ -37,6 +37,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 exports.execute = exports.query = exports.getConnection = void 0;
+if (typeof window !== 'undefined') {
+    throw new Error('`db.ts` should only be used on the server side.');
+}
 var mssql_1 = require("mssql");
 var config = {
     user: process.env.DB_USER || 'sa',
@@ -73,30 +76,42 @@ exports.getConnection = getConnection;
 function query(sqlQuery, params) {
     if (params === void 0) { params = []; }
     return __awaiter(this, void 0, void 0, function () {
-        var pool, request_1, result, error_2;
+        var modifiedSqlQuery, pool, request_1, result, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 3, , 4]);
+                    modifiedSqlQuery = sqlQuery;
+                    // 若已經是 @param0, @param1... 則不需替換
+                    // 僅需將物件參數的 @key 改為 @paramN
+                    // 這裡假設 SQL 已經寫成 @param0, @param1 ...
+                    console.log('Executing SQL Query:', modifiedSqlQuery);
+                    console.log('With Parameters:', params);
                     return [4 /*yield*/, getConnection()];
                 case 1:
                     pool = _a.sent();
                     request_1 = pool.request();
                     params.forEach(function (param, index) {
-                        if (param === null) {
-                            request_1.input("param" + index, mssql_1["default"].VarChar, null);
+                        if (param === null || param === undefined) {
+                            request_1.input("param" + index, mssql_1["default"].NVarChar, null);
                         }
                         else if (typeof param === 'number') {
-                            request_1.input("param" + index, mssql_1["default"].Int, param);
+                            // 整數使用 Int，小數使用 Float
+                            if (Number.isInteger(param)) {
+                                request_1.input("param" + index, mssql_1["default"].Int, param);
+                            }
+                            else {
+                                request_1.input("param" + index, mssql_1["default"].Float, param);
+                            }
                         }
                         else {
                             request_1.input("param" + index, mssql_1["default"].NVarChar, param);
                         }
                     });
-                    return [4 /*yield*/, request_1.query(sqlQuery)];
+                    return [4 /*yield*/, request_1.query(modifiedSqlQuery)];
                 case 2:
                     result = _a.sent();
-                    return [2 /*return*/, result.recordset];
+                    return [2 /*return*/, result.recordset ? result.recordset : result];
                 case 3:
                     error_2 = _a.sent();
                     console.error('查詢錯誤:', error_2);
@@ -125,7 +140,12 @@ function execute(sqlQuery, params) {
                             request_2.input(key, mssql_1["default"].VarChar, null);
                         }
                         else if (typeof value === 'number') {
-                            request_2.input(key, mssql_1["default"].Int, value);
+                            if (Number.isInteger(value)) {
+                                request_2.input(key, mssql_1["default"].Int, value);
+                            }
+                            else {
+                                request_2.input(key, mssql_1["default"].Float, value);
+                            }
                         }
                         else {
                             request_2.input(key, mssql_1["default"].NVarChar, value);

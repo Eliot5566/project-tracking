@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { getConnection, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
  
 export const dynamic = 'force-dynamic'; // 確保不緩存API響應
@@ -101,7 +101,7 @@ export async function GET() {
       FROM Tasks
       GROUP BY status
     `;
-  const taskDistribution = await query<any[]>(taskDistributionQuery);
+    const taskDistribution = await query<any[]>(taskDistributionQuery);
  
     const upcomingDeadlinesQuery = `
       SELECT TOP 5
@@ -152,20 +152,9 @@ export async function GET() {
       ORDER BY t.updatedAt DESC;
     `;
     const recentActivities = await query<any[]>(recentActivitiesQuery);
-    // 將 mssql IResult/IRecordSet 正規化為陣列的工具函式
-    const toArray = (raw: any): any[] =>
-      Array.isArray(raw) ? raw : (Array.isArray(raw?.recordset) ? raw.recordset : []);
-
-    // 針對需要用到陣列操作或回傳陣列的資料，全數正規化
-    const taskDistributionArr = toArray(taskDistribution);
-    const recentProjectsArr = toArray(recentProjects);
-    const recentTasksArr = toArray(recentTasks);
-    const projectProgressArr = toArray(projectProgress);
-    const upcomingDeadlinesArr = toArray(upcomingDeadlines);
-    const weeklyProgressArr = toArray(weeklyProgress);
-    const teamWorkloadArr = toArray(teamWorkload);
-    const recentActivitiesArr = toArray(recentActivities);
-
+ 
+ 
+ 
     const taskStatusColorMap: Record<string, string> = {
       completed: '#52c41a',
       in_progress: '#1890ff',
@@ -173,7 +162,7 @@ export async function GET() {
       pending: '#faad14'
     };
  
-  const taskByStatus = taskDistributionArr.map((t: any) => ({
+    const taskByStatus = taskDistribution.map(t => ({
       name: t.category,
       value: t.count,
       color: taskStatusColorMap[t.category] || '#8884d8'
@@ -207,23 +196,22 @@ export async function GET() {
         activeMembers: firstTeamStats.activeMembers || 0,
         averageTaskCompletion: sqlCompletionRate,
       },
-  recentProjects: recentProjectsArr,
-  recentTasks: recentTasksArr,
-  projectProgress: projectProgressArr,
-  taskDistribution: taskDistributionArr,
-  upcomingDeadlines: upcomingDeadlinesArr,
-  weeklyProgress: weeklyProgressArr,
-  teamWorkload: teamWorkloadArr,
-  recentActivities: recentActivitiesArr,
+      recentProjects: recentProjects || [],
+      recentTasks: recentTasks || [],
+      projectProgress: projectProgress || [],
+      taskDistribution: taskDistribution || [],
+      upcomingDeadlines: upcomingDeadlines || [],
+      weeklyProgress: weeklyProgress || [],
+      teamWorkload: teamWorkload || [],
+      recentActivities: recentActivities || [],
       taskByStatus: taskByStatus || []
     };
  
     return NextResponse.json(dashboardData);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('獲取儀表板數據時發生錯誤:', msg);
+  } catch (error) {
+    console.error('獲取儀表板數據時發生錯誤:', error);
     return NextResponse.json(
-      { error: '獲取儀表板數據失敗', details: msg },
+      { error: '獲取儀表板數據失敗', details: error.message },
       { status: 500 }
     );
   }

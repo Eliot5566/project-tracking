@@ -206,41 +206,46 @@ export default function WorkLogBlock() {
   // 查詢日誌
   const fetchLogs = async (paramsOverride: any = {}) => {
     setLoading(true);
-    const params = new URLSearchParams();
-    const page = paramsOverride.current || pagination.current;
-    const pageSize = paramsOverride.pageSize || pagination.pageSize;
-    params.append('page', String(page));
-    params.append('pageSize', String(pageSize));
-    if (userId) params.append('userId', String(userId));
-    if (searchContent) params.append('content', searchContent);
-    if (searchTask) params.append('task', searchTask);
-    if (
-      searchDateRange &&
-      searchDateRange.length === 2 &&
-      searchDateRange[0] &&
-      searchDateRange[1]
-    ) {
-      params.append('startDate', searchDateRange[0].format('YYYY-MM-DD'));
-      params.append('endDate', searchDateRange[1].format('YYYY-MM-DD'));
+    try {
+      const params = new URLSearchParams();
+      const page = paramsOverride.current || pagination.current;
+      const pageSize = paramsOverride.pageSize || pagination.pageSize;
+      params.append('page', String(page));
+      params.append('pageSize', String(pageSize));
+      if (userId) params.append('userId', String(userId));
+      if (searchContent) params.append('content', searchContent);
+      if (searchTask) params.append('task', searchTask);
+      if (
+        searchDateRange &&
+        searchDateRange.length === 2 &&
+        searchDateRange[0] &&
+        searchDateRange[1]
+      ) {
+        params.append('startDate', searchDateRange[0].format('YYYY-MM-DD'));
+        params.append('endDate', searchDateRange[1].format('YYYY-MM-DD'));
+      }
+      if (sorter.field && sorter.order) {
+        params.append('sortField', sorter.field);
+        params.append('sortOrder', sorter.order === 'ascend' ? 'asc' : 'desc');
+      }
+      const res = await fetch(`/api/worklogs?${params.toString()}`);
+      const json = await res.json();
+      let logs = json.data || [];
+      logs = logs.map((log: any) => ({
+        ...log,
+        userName:
+          log.userName ||
+          users.find((u) => u.id === log.userId)?.name ||
+          log.userId ||
+          '',
+      }));
+      setData(logs);
+      setPagination((prev) => ({ ...prev, total: json.total || logs.length }));
+    } catch (e) {
+      message.error('取得日誌失敗');
+    } finally {
+      setLoading(false);
     }
-    if (sorter.field && sorter.order) {
-      params.append('sortField', sorter.field);
-      params.append('sortOrder', sorter.order === 'ascend' ? 'asc' : 'desc');
-    }
-    const res = await fetch(`/api/worklogs?${params.toString()}`);
-    const json = await res.json();
-    let logs = json.data || [];
-    logs = logs.map((log: any) => ({
-      ...log,
-      userName:
-        log.userName ||
-        users.find((u) => u.id === log.userId)?.name ||
-        log.userId ||
-        '',
-    }));
-    setData(logs);
-    setPagination((prev) => ({ ...prev, total: json.total || logs.length }));
-    setLoading(false);
   };
 
   // 查詢條件清除
@@ -314,11 +319,11 @@ export default function WorkLogBlock() {
     reader.onload = async (e) => {
       const workbook = XLSX.read(e.target?.result, { type: 'binary' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const json = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 }) as any[][];
       let lastDate = '';
       // 檢查第一行是否為標題 json.slice(1) 用於跳過第一行標題 map(row => row) 用於將每一行轉換為物件
       const rows = [];
-      for (const row of json.slice(1)) {
+  for (const row of (json.slice(1) as any[][])) {
         let dateVal = row[0];
         let parsedDate = '';
         if (dateVal === undefined || dateVal === null || dateVal === '') {
@@ -351,20 +356,36 @@ export default function WorkLogBlock() {
         });
       }
 
-      // 寫入後端
-      for (const row of rows) {
-        await fetch('/api/worklogs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(row),
-        });
+      // 寫入後端（逐筆確認結果，統計成功/失敗）
+      let successCount = 0;
+      const failedIdx: number[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const res = await fetch('/api/worklogs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(row),
+          });
+          const json = await res.json();
+          if (json && json.success) successCount++;
+          else failedIdx.push(i);
+        } catch (e) {
+          failedIdx.push(i);
+        }
       }
       // 重新取得資料
-      fetch(`/api/worklogs?userId=${userId}`)
-        .then((res) => res.json())
-        .then((res) => setData(res.data || []));
+      try {
+        const res = await fetch(`/api/worklogs?userId=${userId}`);
+        const j = await res.json();
+        setData(j.data || []);
+      } catch {}
       setImporting(false);
-      message.success('匯入成功，已寫入資料庫');
+      if (failedIdx.length > 0) {
+        message.warning(`匯入完成：成功 ${successCount} 筆，失敗 ${failedIdx.length} 筆`);
+      } else {
+        message.success('匯入成功，已寫入資料庫');
+      }
     };
     reader.readAsBinaryString(file);
     return false;
@@ -1080,7 +1101,7 @@ export default function WorkLogBlock() {
                 placeholder="工時"
                 value={editForm.hours}
                 onChange={(e) =>
-                  setEditForm((f) => ({ ...f, hours: e.target.value }))
+                  setEditForm((f) => ({ ...f, hours: Number(e.target.value || 0) }))
                 }
               />
             </div>

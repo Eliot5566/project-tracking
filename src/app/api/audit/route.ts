@@ -49,4 +49,15 @@ export async function POST(request: NextRequest) {
 }
 
 // 取得部門清單
-// 注意：部門清單路由已移至 /api/audit/departments/route.ts
+export async function GET_DEPARTMENTS() {
+  try {
+    const sql = `SELECT DISTINCT 部門名稱  FROM [JCYDB].[dbo].[人員對照檔]`;
+    const result = await query<{ department: string }[]>(sql);
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: '取得部門清單失敗' },
+      { status: 500 }
+    );
+  }
+}

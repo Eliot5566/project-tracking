@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       `);
 
     // 不產生 JWT，直接回傳 user 物件，並加上 teamMemberId
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         user: {
@@ -87,12 +87,32 @@ export async function POST(request: Request) {
           name: user.name,
           department: user.departmentName,
           position: user.position,
-          role: ['經理', '副理', '總經理', '董事長', '課長'].some(pos => user.position.includes(pos)) || user.departmentCode.startsWith('IT') ? 'admin' : 'user',
+          role:
+            ['經理', '副理', '總經理', '董事長', '課長'].some((pos) =>
+              user.position.includes(pos)
+            ) || user.departmentCode.startsWith('IT')
+              ? 'admin'
+              : 'user',
           email: user.email,
           teamMemberId, // 新增這個欄位
-        }
-      }
+        },
+      },
     });
+
+    // 設置用於後端 API 授權的 cookie（讓 /api/worklogs 能取得登入者）
+    if (teamMemberId) {
+      const cookieOptions = {
+        httpOnly: true as const,
+        sameSite: 'lax' as const,
+        path: '/',
+        maxAge: 7 * 24 * 60 * 360, // 7 天
+      };
+      response.cookies.set('teamMemberId', String(teamMemberId), cookieOptions);
+      // 兼容舊版 userId 名稱
+      response.cookies.set('userId', String(teamMemberId), cookieOptions);
+    }
+
+    return response;
   } catch (error) {
     console.error('登入錯誤:', error);
     return NextResponse.json(

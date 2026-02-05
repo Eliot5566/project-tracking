@@ -2,15 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  pageExtensions: ['ts', 'tsx'],
-  // 產出獨立可執行包，方便在其他位置以 node server.js 執行
-  output: 'standalone',
-  // 允許忽略 TypeScript 與 ESLint 錯誤以便先進行打包
+  experimental: {
+    serverActions: true,
+  },
+  // 略過 TypeScript 型別錯誤以便先行建構（注意：可能造成執行期錯誤）
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   webpack: (config, { isServer }) => {
     // 伺服器端可以使用 Node.js 的模組

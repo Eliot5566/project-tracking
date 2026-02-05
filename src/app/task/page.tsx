@@ -32,10 +32,10 @@ import {
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import TaskForm from '../components/TaskForm';
-import TaskDependencyModal from '../components/TaskDependencyModal';
-import GanttChart from '../components/GanttChart';
-import ImportTaskModal from '../components/ImportTaskModal';
+import TaskForm from '@/app/components/TaskForm';
+import TaskDependencyModal from '@/app/components/TaskDependencyModal';
+import GanttChart from '@/app/components/GanttChart';
+import ImportTaskModal from '@/app/components/ImportTaskModal';
 import { Task as GanttTask, ViewMode } from 'gantt-task-react';
 
 const { Title } = Typography;
@@ -562,7 +562,7 @@ export default function TaskPage() {
 
         <TaskDependencyModal
           visible={dependencyModalVisible}
-          task={selectedTask}
+          task={selectedTask ?? null}
           onClose={() => setDependencyModalVisible(false)}
         />
       </Card>

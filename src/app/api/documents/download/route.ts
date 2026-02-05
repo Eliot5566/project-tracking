@@ -28,18 +28,12 @@ export async function GET(request: Request) {
       );
     }
 
-    // 查詢文件密碼 hash（正規化回傳型別以避免 IResult/IRecordSet 直接取 length 的型別錯誤）
-    const docsRaw = await query<any>(
-      'SELECT passwordHash FROM Documents WHERE filePath = @param0',
-      [filePath]
-    );
-    const docs: any[] = Array.isArray(docsRaw)
-      ? docsRaw
-      : (Array.isArray((docsRaw as any)?.recordset) ? (docsRaw as any).recordset : []);
-    if (!docs || docs.length === 0) {
+    // 查詢文件密碼 hash
+    const docs = await query('SELECT passwordHash FROM Documents WHERE filePath = @param0', [filePath]);
+    if (!docs.length) {
       return NextResponse.json({ success: false, error: '文件不存在' }, { status: 404 });
     }
-    const passwordHashDb = docs[0]?.passwordHash || '';
+    const passwordHashDb = docs[0].passwordHash || '';
     if (passwordHashDb) {
       // 有設密碼，需驗證
       const crypto = await import('crypto');
@@ -62,7 +56,7 @@ export async function GET(request: Request) {
     }
 
     // 讀取檔案內容
-  const fileBuffer = await fsPromises.readFile(fullPath);
+    const fileBuffer = await fsPromises.readFile(fullPath);
 
     // 設定 Content-Type (根據副檔名判斷)
     const ext = path.extname(fullPath).toLowerCase();
@@ -97,10 +91,7 @@ export async function GET(request: Request) {
 
     const baseName = path.basename(fullPath);
     const encodedName = encodeURIComponent(baseName);
-  // 將 Buffer 複製到 Uint8Array，避免 SharedArrayBuffer 型別問題
-  const body = new Uint8Array(fileBuffer.length);
-  body.set(fileBuffer);
-  return new NextResponse(body, {
+    return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename*=UTF-8''${encodedName}`,
