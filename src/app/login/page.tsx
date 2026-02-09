@@ -5,11 +5,13 @@ import { Form, Input, Button, Card, message, Checkbox, Typography } from 'antd';
 import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useI18n } from '../components/I18nProvider';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [form] = Form.useForm();
+  const { t } = useI18n();
 
   const handleLogin = async (values: { employeeId: string; password: string }) => {
     setLoading(true);
@@ -28,15 +30,15 @@ export default function LoginPage() {
         // 儲存登入狀態
         localStorage.setItem('isLogin', '1');
         localStorage.setItem('user', JSON.stringify(result.data.user));
-        message.success('登入成功');
+        message.success(t('login.submit'));
         // 直接 reload，確保 Navbar 立即顯示
         window.location.href = '/';
       } else {
-        message.error(result.error || '登入失敗');
+        message.error(result.error || t('login.password.required'));
       }
     } catch (error) {
       console.error('登入錯誤:', error);
-      message.error('登入失敗');
+      message.error(t('login.password.required'));
     } finally {
       setLoading(false);
     }
@@ -59,8 +61,8 @@ export default function LoginPage() {
       >
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <Image src="/next.svg" alt="logo" width={48} height={48} style={{ marginBottom: 8 }} />
-          <Typography.Title level={3} style={{ marginBottom: 0 }}>專案追蹤系統</Typography.Title>
-          <Typography.Text type="secondary">請登入您的帳號</Typography.Text>
+          <Typography.Title level={3} style={{ marginBottom: 0 }}>{t('login.title')}</Typography.Title>
+          <Typography.Text type="secondary">{t('login.subtitle')}</Typography.Text>
         </div>
         <Form
           form={form}
@@ -70,26 +72,26 @@ export default function LoginPage() {
         >
           <Form.Item
             name="employeeId"
-            rules={[{ required: true, message: '請輸入工號' }]}
+            rules={[{ required: true, message: t('login.username.required') }]}
           >
             <Input
               prefix={<UserOutlined style={{ color: '#1677ff' }} />}
-              placeholder="工號"
+              placeholder={t('login.username')}
               autoComplete="username"
             />
           </Form.Item>
           <Form.Item
             name="password"
-            rules={[{ required: true, message: '請輸入密碼' }]}
+            rules={[{ required: true, message: t('login.password.required') }]}
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: '#1677ff' }} />}
-              placeholder="密碼"
+              placeholder={t('login.password')}
               autoComplete="current-password"
             />
           </Form.Item>
           <Form.Item name="remember" valuePropName="checked" style={{ marginBottom: 8 }}>
-            <Checkbox>記住我</Checkbox>
+            <Checkbox>{t('login.remember')}</Checkbox>
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>
             <Button
@@ -100,12 +102,12 @@ export default function LoginPage() {
               icon={<LoginOutlined />}
               style={{ fontWeight: 600, letterSpacing: 2 }}
             >
-              登入
+              {t('login.submit')}
             </Button>
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'center', marginTop: 24, color: '#888', fontSize: 13 }}>
-          <span>© {new Date().getFullYear()} Project Tracking System</span>
+          <span>© {new Date().getFullYear()} {t('footer.copyright')}</span>
         </div>
       </Card>
     </div>

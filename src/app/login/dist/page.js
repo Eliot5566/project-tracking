@@ -41,12 +41,14 @@ var react_1 = require("react");
 var antd_1 = require("antd");
 var icons_1 = require("@ant-design/icons");
 var navigation_1 = require("next/navigation");
-var js_cookie_1 = require("js-cookie");
+var image_1 = require("next/image");
+var I18nProvider_1 = require("../components/I18nProvider");
 function LoginPage() {
     var _this = this;
     var _a = react_1.useState(false), loading = _a[0], setLoading = _a[1];
     var router = navigation_1.useRouter();
     var form = antd_1.Form.useForm()[0];
+    var t = I18nProvider_1.useI18n().t;
     var handleLogin = function (values) { return __awaiter(_this, void 0, void 0, function () {
         var response, result, error_1;
         return __generator(this, function (_a) {
@@ -69,21 +71,21 @@ function LoginPage() {
                 case 3:
                     result = _a.sent();
                     if (result.success) {
-                        // 儲存 token
-                        js_cookie_1["default"].set('token', result.data.token, { expires: 7 });
-                        // 儲存使用者資訊
+                        // 儲存登入狀態
+                        localStorage.setItem('isLogin', '1');
                         localStorage.setItem('user', JSON.stringify(result.data.user));
-                        antd_1.message.success('登入成功');
-                        router.push('/');
+                        antd_1.message.success(t('login.submit'));
+                        // 直接 reload，確保 Navbar 立即顯示
+                        window.location.href = '/';
                     }
                     else {
-                        antd_1.message.error(result.error || '登入失敗');
+                        antd_1.message.error(result.error || t('login.password.required'));
                     }
                     return [3 /*break*/, 6];
                 case 4:
                     error_1 = _a.sent();
                     console.error('登入錯誤:', error_1);
-                    antd_1.message.error('登入失敗');
+                    antd_1.message.error(t('login.password.required'));
                     return [3 /*break*/, 6];
                 case 5:
                     setLoading(false);
@@ -92,17 +94,33 @@ function LoginPage() {
             }
         });
     }); };
-    return (React.createElement("div", { className: "min-h-screen flex items-center justify-center bg-gray-100" },
-        React.createElement(antd_1.Card, { className: "w-96" },
-            React.createElement("div", { className: "text-center mb-8" },
-                React.createElement("h1", { className: "text-2xl font-bold" }, "\u5C08\u6848\u8FFD\u8E64\u7CFB\u7D71"),
-                React.createElement("p", { className: "text-gray-500" }, "\u8ACB\u767B\u5165\u60A8\u7684\u5E33\u865F")),
-            React.createElement(antd_1.Form, { form: form, onFinish: handleLogin, layout: "vertical" },
-                React.createElement(antd_1.Form.Item, { name: "employeeId", rules: [{ required: true, message: '請輸入工號' }] },
-                    React.createElement(antd_1.Input, { prefix: React.createElement(icons_1.UserOutlined, null), placeholder: "\u5DE5\u865F", size: "large" })),
-                React.createElement(antd_1.Form.Item, { name: "password", rules: [{ required: true, message: '請輸入密碼' }] },
-                    React.createElement(antd_1.Input.Password, { prefix: React.createElement(icons_1.LockOutlined, null), placeholder: "\u5BC6\u78BC", size: "large" })),
-                React.createElement(antd_1.Form.Item, null,
-                    React.createElement(antd_1.Button, { type: "primary", htmlType: "submit", loading: loading, block: true, size: "large" }, "\u767B\u5165"))))));
+    return (React.createElement("div", { style: {
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: "url('/bg.jpg') center 80px / 1900px no-repeat, linear-gradient(135deg, #f0f4ff 0%, #e6f7ff 50%)",
+            backgroundAttachment: 'fixed'
+        } },
+        React.createElement(antd_1.Card, { style: { width: 380, borderRadius: 16, boxShadow: '0 4px 32px #0001', padding: 0 }, bodyStyle: { padding: 32 } },
+            React.createElement("div", { style: { textAlign: 'center', marginBottom: 24 } },
+                React.createElement(image_1["default"], { src: "/next.svg", alt: "logo", width: 48, height: 48, style: { marginBottom: 8 } }),
+                React.createElement(antd_1.Typography.Title, { level: 3, style: { marginBottom: 0 } }, t('login.title')),
+                React.createElement(antd_1.Typography.Text, { type: "secondary" }, t('login.subtitle'))),
+            React.createElement(antd_1.Form, { form: form, onFinish: handleLogin, layout: "vertical", size: "large" },
+                React.createElement(antd_1.Form.Item, { name: "employeeId", rules: [{ required: true, message: t('login.username.required') }] },
+                    React.createElement(antd_1.Input, { prefix: React.createElement(icons_1.UserOutlined, { style: { color: '#1677ff' } }), placeholder: t('login.username'), autoComplete: "username" })),
+                React.createElement(antd_1.Form.Item, { name: "password", rules: [{ required: true, message: t('login.password.required') }] },
+                    React.createElement(antd_1.Input.Password, { prefix: React.createElement(icons_1.LockOutlined, { style: { color: '#1677ff' } }), placeholder: t('login.password'), autoComplete: "current-password" })),
+                React.createElement(antd_1.Form.Item, { name: "remember", valuePropName: "checked", style: { marginBottom: 8 } },
+                    React.createElement(antd_1.Checkbox, null, t('login.remember'))),
+                React.createElement(antd_1.Form.Item, { style: { marginBottom: 0 } },
+                    React.createElement(antd_1.Button, { type: "primary", htmlType: "submit", loading: loading, block: true, icon: React.createElement(icons_1.LoginOutlined, null), style: { fontWeight: 600, letterSpacing: 2 } }, t('login.submit')))),
+            React.createElement("div", { style: { textAlign: 'center', marginTop: 24, color: '#888', fontSize: 13 } },
+                React.createElement("span", null,
+                    "\u00A9 ",
+                    new Date().getFullYear(),
+                    " ",
+                    t('footer.copyright'))))));
 }
 exports["default"] = LoginPage;

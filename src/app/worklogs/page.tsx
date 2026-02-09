@@ -14,6 +14,7 @@ import {
   Spin,
 } from 'antd';
 import { UploadOutlined, PlusOutlined } from '@ant-design/icons';
+import { useI18n } from '../components/I18nProvider';
 import dayjs from 'dayjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -36,7 +37,8 @@ import { error } from 'console';
 const columns = (
   handleEdit: (record: WorkLog) => void,
   handleDelete: (id: number) => void,
-  currentUserId?: number
+  currentUserId: number | undefined,
+  dateLocale: 'zh-TW' | 'en-US' | 'ja-JP'
 ) => [
   { title: '使用者', dataIndex: 'userName', key: 'userName', width: 100 },
   {
@@ -46,12 +48,11 @@ const columns = (
     render: (date: string) =>
       date
         ? new Date(date)
-            .toLocaleDateString('zh-TW', {
+            .toLocaleDateString(dateLocale, {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit',
             })
-            .replace(/\//g, '/')
         : '',
   },
   { title: '工作事項', dataIndex: 'task', key: 'task' },
@@ -88,8 +89,12 @@ const columns = (
 ];
 
 export default function WorkLogBlock() {
+    const { locale } = useI18n();
+    const dateLocale: 'zh-TW' | 'en-US' | 'ja-JP' =
+      locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
   // 取得登入者 userId（teamMemberId）
   const [loginUserId, setLoginUserId] = useState<number | undefined>(undefined);
+    const [userDept, setUserDept] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const userStr = localStorage.getItem('user');
@@ -97,6 +102,7 @@ export default function WorkLogBlock() {
         try {
           const user = JSON.parse(userStr);
           if (user.teamMemberId) setLoginUserId(Number(user.teamMemberId));
+            if (user.department) setUserDept(String(user.department));
         } catch {}
       }
     }
@@ -183,6 +189,14 @@ export default function WorkLogBlock() {
       const isLogin = localStorage.getItem('isLogin') === '1';
       if (!isLogin) {
         router.replace('/login');
+        return;
+      }
+      // 僅允許 IT 相關部門使用
+      const dept = userDept || (function(){ try{ const u = JSON.parse(localStorage.getItem('user')||'{}'); return u.department; } catch { return undefined; } })();
+      const isIT = !!dept && /資訊|系統|資安|IT/i.test(dept);
+      if (!isIT) {
+        // 導回首頁或顯示 403
+        router.replace('/');
       }
     }
   }, []);
@@ -992,7 +1006,7 @@ export default function WorkLogBlock() {
           }}
         >
           <Table
-            columns={columns(handleEdit, handleDelete, loginUserId).map(
+            columns={columns(handleEdit, handleDelete, loginUserId, dateLocale).map(
               (col) => ({
                 ...col,
                 onCell: () => ({

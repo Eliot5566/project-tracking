@@ -5,6 +5,7 @@ import { UserOutlined, LogoutOutlined, FileTextOutlined } from '@ant-design/icon
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import GlobalReminders from './GlobalReminders'; // 假設這是全域提醒組件的路徑
+import { useI18n } from './I18nProvider';
 
 import {
   DashboardOutlined,
@@ -25,37 +26,29 @@ interface NavbarProps {
 export default function Navbar({ darkMode }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
 
-  const menuItems = [
+  const baseMenuItems = [
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: '首頁',
+      label: t('navbar.home'),
     },
     {
       key: '/projects',
       icon: <ProjectOutlined />,
-      label: '專案管理',
+      label: t('navbar.projects'),
     },
     {
       key: '/task',
       icon: <ProjectOutlined />,
-      label: '任務管理',
+      label: t('navbar.tasks'),
     },
-    {
-      key: '/worklogs',
-      icon: <BulbOutlined />,
-      label: '工作日誌',
-    },
-    {
-      key: '/team',
-      icon: <TeamOutlined />,
-      label: '團隊管理',
-    },
+    // 依權限再決定是否加入 worklogs / team
     {
       key: '/calendar',
       icon: <CalendarOutlined />,
-      label: '行事曆',
+      label: t('navbar.calendar'),
     },
     // {
     //   key: '/notifications',
@@ -65,27 +58,27 @@ export default function Navbar({ darkMode }: NavbarProps) {
     {
       key: '/progress',
       icon: <BarChartOutlined />,
-      label: '進度追蹤',
+      label: t('navbar.progress'),
     },
     {
       key: '/dashboard',
       icon: <ProjectOutlined />,
-      label: '儀錶板',
+      label: t('navbar.dashboard'),
     },
     {
       key: '/documents',
       icon: <ProjectOutlined />,
-      label: '文件管理',
+      label: t('navbar.documents'),
     },
     {
       key: '/notes',
       icon: <FileTextOutlined />,
-      label: '會議記錄',
+      label: t('navbar.notes'),
     },
     {
       key: '/audit',
       icon: <TeamOutlined />,
-      label: '稽核專區',
+      label: t('navbar.audit'),
     },
 
     // {
@@ -96,7 +89,7 @@ export default function Navbar({ darkMode }: NavbarProps) {
   ];
 
   // 取得登入者資訊
-  const [user, setUser] = useState<{ name: string; position: string } | null>(
+  const [user, setUser] = useState<{ name: string; position: string; department?: string; role?: string } | null>(
     null
   );
   useEffect(() => {
@@ -105,11 +98,20 @@ export default function Navbar({ darkMode }: NavbarProps) {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const u = JSON.parse(userStr);
-          setUser({ name: u.name, position: u.position });
+          setUser({ name: u.name, position: u.position, department: u.department, role: u.role });
         }
       } catch {}
     }
   }, []);
+
+  const isIT = !!user?.department && /資訊|系統|資安|IT/i.test(user.department);
+  const menuItems = [
+    ...baseMenuItems,
+    ...(isIT ? [
+      { key: '/worklogs', icon: <BulbOutlined />, label: t('navbar.worklogs') },
+      { key: '/team', icon: <TeamOutlined />, label: t('navbar.team') },
+    ] : []),
+  ];
 
   // 登出
   const handleLogout = () => {
@@ -122,7 +124,7 @@ export default function Navbar({ darkMode }: NavbarProps) {
   const userMenu = (
     <Menu>
       <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
-        登出
+        {t('navbar.logout')}
       </Menu.Item>
     </Menu>
   );
@@ -151,7 +153,7 @@ export default function Navbar({ darkMode }: NavbarProps) {
             color: darkMode ? '#ffffff' : '#000000',
           }}
         >
-          專案追蹤系統
+          {t('app.headerTitle')}
         </div>
         <Menu
           mode="horizontal"

@@ -64,11 +64,14 @@ var TaskForm_1 = require("@/app/components/TaskForm");
 var TaskDependencyModal_1 = require("@/app/components/TaskDependencyModal");
 var GanttChart_1 = require("@/app/components/GanttChart");
 var ImportTaskModal_1 = require("@/app/components/ImportTaskModal");
+var I18nProvider_1 = require("../components/I18nProvider");
 var Title = antd_1.Typography.Title;
 var confirm = antd_1.Modal.confirm;
 function TaskPage() {
     var _this = this;
     var router = navigation_1.useRouter();
+    var _a = I18nProvider_1.useI18n(), t = _a.t, locale = _a.locale;
+    var dateLocale = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
     react_1.useEffect(function () {
         if (typeof window !== 'undefined') {
             var isLogin = localStorage.getItem('isLogin') === '1';
@@ -77,19 +80,19 @@ function TaskPage() {
             }
         }
     }, []);
-    var _a = react_1.useState([]), tasks = _a[0], setTasks = _a[1];
-    var _b = react_1.useState(false), openDialog = _b[0], setOpenDialog = _b[1];
-    var _c = react_1.useState(), selectedTask = _c[0], setSelectedTask = _c[1];
-    var _d = react_1.useState(false), loading = _d[0], setLoading = _d[1];
-    var _e = react_1.useState(false), dependencyModalVisible = _e[0], setDependencyModalVisible = _e[1];
-    var _f = react_1.useState('list'), viewMode = _f[0], setViewMode = _f[1];
-    var _g = react_1.useState([]), dependencies = _g[0], setDependencies = _g[1]; // 所有依賴關係
-    var _h = react_1.useState(false), importModalVisible = _h[0], setImportModalVisible = _h[1];
-    var _j = react_1.useState([]), projects = _j[0], setProjects = _j[1];
-    var _k = react_1.useState([]), teamMembers = _k[0], setTeamMembers = _k[1];
-    var _l = react_1.useState([]), selectedProjects = _l[0], setSelectedProjects = _l[1];
-    var _m = react_1.useState([]), selectedMembers = _m[0], setSelectedMembers = _m[1];
-    var _o = react_1.useState(''), search = _o[0], setSearch = _o[1];
+    var _b = react_1.useState([]), tasks = _b[0], setTasks = _b[1];
+    var _c = react_1.useState(false), openDialog = _c[0], setOpenDialog = _c[1];
+    var _d = react_1.useState(), selectedTask = _d[0], setSelectedTask = _d[1];
+    var _e = react_1.useState(false), loading = _e[0], setLoading = _e[1];
+    var _f = react_1.useState(false), dependencyModalVisible = _f[0], setDependencyModalVisible = _f[1];
+    var _g = react_1.useState('list'), viewMode = _g[0], setViewMode = _g[1];
+    var _h = react_1.useState([]), dependencies = _h[0], setDependencies = _h[1]; // 所有依賴關係
+    var _j = react_1.useState(false), importModalVisible = _j[0], setImportModalVisible = _j[1];
+    var _k = react_1.useState([]), projects = _k[0], setProjects = _k[1];
+    var _l = react_1.useState([]), teamMembers = _l[0], setTeamMembers = _l[1];
+    var _m = react_1.useState([]), selectedProjects = _m[0], setSelectedProjects = _m[1];
+    var _o = react_1.useState([]), selectedMembers = _o[0], setSelectedMembers = _o[1];
+    var _p = react_1.useState(''), search = _p[0], setSearch = _p[1];
     // 取得專案與人員選項
     var fetchProjects = function () { return __awaiter(_this, void 0, void 0, function () {
         var res, data, _a;
@@ -170,15 +173,15 @@ function TaskPage() {
                     if (tasksJson.success)
                         setTasks(tasksJson.data);
                     else
-                        antd_1.message.error('獲取任務列表失敗');
+                        antd_1.message.error(t('tasks.error.fetch') || '獲取任務列表失敗');
                     if (depJson.success)
                         setDependencies(depJson.data);
                     else
-                        antd_1.message.error('獲取依賴關係失敗');
+                        antd_1.message.error(t('tasks.error.fetchDependencies') || '獲取依賴關係失敗');
                     return [3 /*break*/, 7];
                 case 5:
                     error_1 = _b.sent();
-                    antd_1.message.error('獲取任務或依賴失敗');
+                    antd_1.message.error(t('tasks.error.fetchAll') || '獲取任務或依賴失敗');
                     console.error('獲取任務或依賴失敗:', error_1);
                     return [3 /*break*/, 7];
                 case 6:
@@ -226,16 +229,16 @@ function TaskPage() {
                     result_1 = _a.sent();
                     if (result_1.success) {
                         setTasks(function (prev) { return __spreadArrays(prev, [result_1.data]); });
-                        antd_1.message.success('任務創建成功');
+                        antd_1.message.success(t('tasks.create.success') || '任務創建成功');
                         handleCloseDialog();
                     }
                     else {
-                        antd_1.message.error('創建任務失敗');
+                        antd_1.message.error(t('tasks.create.fail') || '創建任務失敗');
                     }
                     return [3 /*break*/, 6];
                 case 4:
                     error_2 = _a.sent();
-                    antd_1.message.error('創建任務失敗');
+                    antd_1.message.error(t('tasks.create.fail') || '創建任務失敗');
                     console.error('創建任務失敗:', error_2);
                     return [3 /*break*/, 6];
                 case 5:
@@ -272,16 +275,16 @@ function TaskPage() {
                         setTasks(function (prev) {
                             return prev.map(function (t) { return (t.id === selectedTask.id ? result_2.data : t); });
                         });
-                        antd_1.message.success('任務更新成功');
+                        antd_1.message.success(t('tasks.update.success') || '任務更新成功');
                         handleCloseDialog();
                     }
                     else {
-                        antd_1.message.error('更新任務失敗');
+                        antd_1.message.error(t('tasks.update.fail') || '更新任務失敗');
                     }
                     return [3 /*break*/, 6];
                 case 4:
                     error_3 = _a.sent();
-                    antd_1.message.error('更新任務失敗');
+                    antd_1.message.error(t('tasks.update.fail') || '更新任務失敗');
                     console.error('更新任務失敗:', error_3);
                     return [3 /*break*/, 6];
                 case 5:
@@ -294,8 +297,8 @@ function TaskPage() {
     var handleDeleteTask = function (taskId) { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             confirm({
-                title: '確認刪除',
-                content: '確定要刪除這個任務嗎？',
+                title: t('common.delete.confirmTitle') || '確認刪除',
+                content: t('common.delete.confirmContent') || '確定要刪除這個任務嗎？',
                 onOk: function () {
                     return __awaiter(this, void 0, void 0, function () {
                         var response, result, error_4;
@@ -316,15 +319,15 @@ function TaskPage() {
                                     result = _a.sent();
                                     if (result.success) {
                                         setTasks(function (prev) { return prev.filter(function (t) { return t.id !== taskId; }); });
-                                        antd_1.message.success('任務刪除成功');
+                                        antd_1.message.success(t('tasks.delete.success') || '任務刪除成功');
                                     }
                                     else {
-                                        antd_1.message.error('刪除任務失敗');
+                                        antd_1.message.error(t('tasks.delete.fail') || '刪除任務失敗');
                                     }
                                     return [3 /*break*/, 6];
                                 case 4:
                                     error_4 = _a.sent();
-                                    antd_1.message.error('刪除任務失敗');
+                                    antd_1.message.error(t('tasks.delete.fail') || '刪除任務失敗');
                                     console.error('刪除任務失敗:', error_4);
                                     return [3 /*break*/, 6];
                                 case 5:
@@ -382,7 +385,7 @@ function TaskPage() {
     var columns = [
         // 依賴關係列
         {
-            title: '依賴',
+            title: t('tasks.columns.dependencies'),
             key: 'dependencies',
             render: function (_, record) {
                 var _a, _b;
@@ -391,47 +394,49 @@ function TaskPage() {
                 return (React.createElement(antd_1.Space, { size: "small" },
                     pre.length > 0 && (React.createElement(antd_1.Tooltip, { title: pre.map(function (d) { return d.dependsOnTaskTitle; }).join(', ') },
                         React.createElement(antd_1.Tag, { color: "blue" },
-                            "\u524D\u7F6E:",
+                            t('tasks.dependencies.pre'),
+                            ":",
                             pre.length))),
                     post.length > 0 && (React.createElement(antd_1.Tooltip, { title: post.map(function (d) { return d.taskTitle; }).join(', ') },
                         React.createElement(antd_1.Tag, { color: "purple" },
-                            "\u5F8C\u7E8C:",
+                            t('tasks.dependencies.post'),
+                            ":",
                             post.length))),
-                    pre.length === 0 && post.length === 0 && (React.createElement(antd_1.Tag, { color: "default" }, "\u7121"))));
+                    pre.length === 0 && post.length === 0 && (React.createElement(antd_1.Tag, { color: "default" }, t('tasks.dependencies.none')))));
             }
         },
         {
-            title: '任務名稱',
+            title: t('tasks.columns.name'),
             dataIndex: 'title',
             key: 'title'
         },
         {
-            title: '專案',
+            title: t('tasks.columns.project'),
             dataIndex: 'projectName',
             key: 'projectName'
         },
         {
-            title: '狀態',
+            title: t('tasks.columns.status'),
             dataIndex: 'status',
             key: 'status',
             render: function (status) { return (React.createElement(antd_1.Tag, { color: getStatusColor(status) }, status === 'pending'
-                ? '待處理'
+                ? t('tasks.status.pending')
                 : status === 'in_progress'
-                    ? '進行中'
+                    ? t('tasks.status.in_progress')
                     : status === 'completed'
-                        ? '已完成'
+                        ? t('tasks.status.completed')
                         : status)); }
         },
         {
-            title: '優先級',
+            title: t('tasks.columns.priority'),
             dataIndex: 'priority',
             key: 'priority',
             render: function (priority) { return (React.createElement(antd_1.Tag, { color: getPriorityColor(priority) }, priority === 'high'
-                ? '高'
+                ? t('tasks.priority.high')
                 : priority === 'medium'
-                    ? '中'
+                    ? t('tasks.priority.medium')
                     : priority === 'low'
-                        ? '低'
+                        ? t('tasks.priority.low')
                         : priority)); }
         },
         //{
@@ -441,14 +446,14 @@ function TaskPage() {
         //  render: (progress: number) => `${progress}%`,
         //},
         {
-            title: '開始日期',
+            title: t('tasks.columns.startDate'),
             dataIndex: 'startDate',
             key: 'startDate',
             render: function (date) {
                 var d = new Date(date);
                 return isNaN(d.getTime())
                     ? ''
-                    : d.toLocaleDateString('zh-TW', {
+                    : d.toLocaleDateString(dateLocale, {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
@@ -456,14 +461,14 @@ function TaskPage() {
             }
         },
         {
-            title: '截止日期',
+            title: t('tasks.columns.dueDate'),
             dataIndex: 'dueDate',
             key: 'dueDate',
             render: function (date) {
                 var d = new Date(date);
                 return isNaN(d.getTime())
                     ? ''
-                    : d.toLocaleDateString('zh-TW', {
+                    : d.toLocaleDateString(dateLocale, {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
@@ -471,12 +476,12 @@ function TaskPage() {
             }
         },
         {
-            title: '負責人',
+            title: t('tasks.columns.assignee'),
             dataIndex: 'assignedToName',
             key: 'assignedToName'
         },
         {
-            title: '操作',
+            title: t('tasks.columns.actions'),
             key: 'action',
             render: function (_, record) { return (React.createElement(antd_1.Space, { size: "middle" },
                 React.createElement(antd_1.Button, { type: "text", icon: React.createElement(icons_1.EditOutlined, null), onClick: function () { return handleOpenDialog(record); } }),
@@ -518,17 +523,17 @@ function TaskPage() {
                     alignItems: 'center',
                     marginBottom: '1rem'
                 } },
-                React.createElement(Title, { level: 3, style: { margin: 0 } }, "\u4EFB\u52D9\u7BA1\u7406"),
+                React.createElement(Title, { level: 3, style: { margin: 0 } }, t('tasks.title')),
                 React.createElement(antd_1.Space, null,
-                    React.createElement(antd_1.Button, { type: "default", onClick: function () { return setImportModalVisible(true); } }, "\u6279\u6B21\u532F\u5165"),
+                    React.createElement(antd_1.Button, { type: "default", onClick: function () { return setImportModalVisible(true); } }, t('tasks.actions.import')),
                     React.createElement(ImportTaskModal_1["default"], { open: importModalVisible, onClose: function () { return setImportModalVisible(false); }, onSuccess: fetchTasksAndDependencies }),
-                    React.createElement(antd_1.Button, { type: viewMode === 'list' ? 'primary' : 'default', onClick: function () { return setViewMode('list'); } }, "\u5217\u8868\u8996\u5716"),
-                    React.createElement(antd_1.Button, { type: viewMode === 'gantt' ? 'primary' : 'default', onClick: function () { return setViewMode('gantt'); } }, "\u7518\u7279\u5716\u8996\u5716"),
-                    React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () { return handleOpenDialog(); } }, "\u65B0\u589E\u4EFB\u52D9"))),
+                    React.createElement(antd_1.Button, { type: viewMode === 'list' ? 'primary' : 'default', onClick: function () { return setViewMode('list'); } }, t('tasks.actions.view.list')),
+                    React.createElement(antd_1.Button, { type: viewMode === 'gantt' ? 'primary' : 'default', onClick: function () { return setViewMode('gantt'); } }, t('tasks.actions.view.gantt')),
+                    React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () { return handleOpenDialog(); } }, t('tasks.actions.add')))),
             React.createElement(antd_1.Space, { style: { marginBottom: 16 } },
-                React.createElement(antd_1.Select, { mode: "multiple", allowClear: true, style: { minWidth: 180 }, placeholder: "\u7BE9\u9078\u5C08\u6848", value: selectedProjects, onChange: setSelectedProjects }, projects.map(function (project) { return (React.createElement(Option, { key: project.id, value: project.id }, project.name)); })),
-                React.createElement(antd_1.Select, { mode: "multiple", allowClear: true, style: { minWidth: 180 }, placeholder: "\u7BE9\u9078\u8CA0\u8CAC\u4EBA", value: selectedMembers, onChange: setSelectedMembers }, teamMembers.map(function (member) { return (React.createElement(Option, { key: member.id, value: member.id }, member.name)); })),
-                React.createElement(antd_1.Input.Search, { placeholder: "\u641C\u5C0B\u4EFB\u52D9\u6A19\u984C/\u63CF\u8FF0", allowClear: true, onSearch: setSearch, style: { width: 220 } })),
+                React.createElement(antd_1.Select, { mode: "multiple", allowClear: true, style: { minWidth: 180 }, placeholder: t('tasks.filter.project'), value: selectedProjects, onChange: setSelectedProjects }, projects.map(function (project) { return (React.createElement(Option, { key: project.id, value: project.id }, project.name)); })),
+                React.createElement(antd_1.Select, { mode: "multiple", allowClear: true, style: { minWidth: 180 }, placeholder: t('tasks.filter.assignee'), value: selectedMembers, onChange: setSelectedMembers }, teamMembers.map(function (member) { return (React.createElement(Option, { key: member.id, value: member.id }, member.name)); })),
+                React.createElement(antd_1.Input.Search, { placeholder: t('tasks.search.placeholder'), allowClear: true, onSearch: setSearch, style: { width: 220 } })),
             viewMode === 'list' ? (React.createElement(antd_1.Table, { columns: columns, dataSource: tasks, rowKey: "id", loading: loading })) : (React.createElement(GanttChart_1["default"], { tasks: ganttTasks })),
             React.createElement(TaskForm_1["default"], { open: openDialog, onClose: handleCloseDialog, onSubmit: selectedTask ? handleUpdateTask : handleCreateTask, initialData: selectedTask }),
             React.createElement(TaskDependencyModal_1["default"], { visible: dependencyModalVisible, task: selectedTask !== null && selectedTask !== void 0 ? selectedTask : null, onClose: function () { return setDependencyModalVisible(false); } }))));

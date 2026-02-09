@@ -58,21 +58,28 @@ exports.__esModule = true;
 var react_1 = require("react");
 var antd_1 = require("antd");
 var dayjs_1 = require("dayjs");
+require("dayjs/locale/zh-tw");
+require("dayjs/locale/ja");
+require("dayjs/locale/en");
+var I18nProvider_1 = require("../components/I18nProvider");
 var icons_1 = require("@ant-design/icons");
 var react_big_calendar_1 = require("react-big-calendar");
 require("react-big-calendar/lib/css/react-big-calendar.css");
 var localizer = react_big_calendar_1.dayjsLocalizer(dayjs_1["default"]);
 function CalendarPage() {
     var _this = this;
-    var _a = react_1.useState(false), mounted = _a[0], setMounted = _a[1];
-    var _b = react_1.useState([]), events = _b[0], setEvents = _b[1];
-    var _c = react_1.useState(false), loading = _c[0], setLoading = _c[1];
-    var _d = react_1.useState(false), modalVisible = _d[0], setModalVisible = _d[1];
-    var _e = react_1.useState(null), editingEvent = _e[0], setEditingEvent = _e[1];
+    var _a = I18nProvider_1.useI18n(), locale = _a.locale, t = _a.t;
+    // 切換 dayjs 語系，使 react-big-calendar 的本地化日期與月份名稱一致
+    dayjs_1["default"].locale(locale === 'en' ? 'en' : locale === 'ja' ? 'ja' : 'zh-tw');
+    var _b = react_1.useState(false), mounted = _b[0], setMounted = _b[1];
+    var _c = react_1.useState([]), events = _c[0], setEvents = _c[1];
+    var _d = react_1.useState(false), loading = _d[0], setLoading = _d[1];
+    var _e = react_1.useState(false), modalVisible = _e[0], setModalVisible = _e[1];
+    var _f = react_1.useState(null), editingEvent = _f[0], setEditingEvent = _f[1];
     var form = antd_1.Form.useForm()[0];
-    var _f = react_1.useState(false), submitting = _f[0], setSubmitting = _f[1];
+    var _g = react_1.useState(false), submitting = _g[0], setSubmitting = _g[1];
     var tempIdRef = react_1.useRef(null);
-    var _g = react_1.useState(new Date()), viewDate = _g[0], setViewDate = _g[1];
+    var _h = react_1.useState(new Date()), viewDate = _h[0], setViewDate = _h[1];
     // IME/輸入追蹤
     var composingRef = react_1.useRef(false);
     var composingDescRef = react_1.useRef(false);
@@ -252,7 +259,15 @@ function CalendarPage() {
                 React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () { if (editingEvent)
                         form.resetFields(); setEditingEvent(null); form.setFieldsValue({ type: 'other', date: dayjs_1["default"]() }); setModalVisible(true); } }, "\u65B0\u589E\u4E8B\u4EF6")) },
             React.createElement("div", { style: { height: 640 } },
-                React.createElement(react_big_calendar_1.Calendar, { localizer: localizer, events: events, startAccessor: "start", endAccessor: "end", selectable: true, popup: true, views: ['month'], date: viewDate, onNavigate: function (d) { return setViewDate(d); }, onSelectSlot: onSelectSlot, onSelectEvent: onSelectEvent, eventPropGetter: eventPropGetter, messages: { today: '今天', previous: '上一頁', next: '下一頁', month: '月', week: '週', day: '日', agenda: '列表' } }))),
+                React.createElement(react_big_calendar_1.Calendar, { localizer: localizer, events: events, startAccessor: "start", endAccessor: "end", selectable: true, popup: true, views: ['month'], date: viewDate, onNavigate: function (d) { return setViewDate(d); }, onSelectSlot: onSelectSlot, onSelectEvent: onSelectEvent, eventPropGetter: eventPropGetter, messages: {
+                        today: t('calendar.messages.today'),
+                        previous: t('calendar.messages.previous'),
+                        next: t('calendar.messages.next'),
+                        month: t('calendar.messages.month'),
+                        week: t('calendar.messages.week'),
+                        day: t('calendar.messages.day'),
+                        agenda: t('calendar.messages.agenda')
+                    } }))),
         React.createElement(antd_1.Modal, { title: editingEvent ? '編輯事件' : '新增事件', open: modalVisible, onCancel: function () { return setModalVisible(false); }, footer: null },
             React.createElement(antd_1.Form, { form: form, layout: "vertical", onValuesChange: function (changed, all) {
                     if (Object.prototype.hasOwnProperty.call(changed, 'title')) {

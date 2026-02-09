@@ -57,13 +57,14 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 exports.__esModule = true;
 var antd_1 = require("antd");
 var icons_1 = require("@ant-design/icons");
+var I18nProvider_1 = require("../components/I18nProvider");
 var dayjs_1 = require("dayjs");
 var react_1 = require("react");
 var navigation_1 = require("next/navigation");
 var XLSX = require("xlsx");
 var antd_2 = require("antd");
 var icons_2 = require("@ant-design/icons");
-var columns = function (handleEdit, handleDelete, currentUserId) { return [
+var columns = function (handleEdit, handleDelete, currentUserId, dateLocale) { return [
     { title: '使用者', dataIndex: 'userName', key: 'userName', width: 100 },
     {
         title: '日期',
@@ -72,12 +73,11 @@ var columns = function (handleEdit, handleDelete, currentUserId) { return [
         render: function (date) {
             return date
                 ? new Date(date)
-                    .toLocaleDateString('zh-TW', {
+                    .toLocaleDateString(dateLocale, {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit'
                 })
-                    .replace(/\//g, '/')
                 : '';
         }
     },
@@ -100,8 +100,11 @@ var columns = function (handleEdit, handleDelete, currentUserId) { return [
 ]; };
 function WorkLogBlock() {
     var _this = this;
+    var locale = I18nProvider_1.useI18n().locale;
+    var dateLocale = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
     // 取得登入者 userId（teamMemberId）
     var _a = react_1.useState(undefined), loginUserId = _a[0], setLoginUserId = _a[1];
+    var _b = react_1.useState(undefined), userDept = _b[0], setUserDept = _b[1];
     react_1.useEffect(function () {
         if (typeof window !== 'undefined') {
             var userStr = localStorage.getItem('user');
@@ -110,20 +113,22 @@ function WorkLogBlock() {
                     var user = JSON.parse(userStr);
                     if (user.teamMemberId)
                         setLoginUserId(Number(user.teamMemberId));
+                    if (user.department)
+                        setUserDept(String(user.department));
                 }
                 catch (_a) { }
             }
         }
     }, []);
     // 編輯日誌 Modal 狀態
-    var _b = react_1.useState(false), editModalOpen = _b[0], setEditModalOpen = _b[1];
-    var _c = react_1.useState(null), editingLog = _c[0], setEditingLog = _c[1];
-    var _d = react_1.useState({
+    var _c = react_1.useState(false), editModalOpen = _c[0], setEditModalOpen = _c[1];
+    var _d = react_1.useState(null), editingLog = _d[0], setEditingLog = _d[1];
+    var _e = react_1.useState({
         date: '',
         task: '',
         content: '',
         hours: 0
-    }), editForm = _d[0], setEditForm = _d[1];
+    }), editForm = _e[0], setEditForm = _e[1];
     // 編輯日誌
     var handleEdit = function (record) {
         setEditingLog(record);
@@ -214,25 +219,39 @@ function WorkLogBlock() {
             var isLogin = localStorage.getItem('isLogin') === '1';
             if (!isLogin) {
                 router.replace('/login');
+                return;
+            }
+            // 僅允許 IT 相關部門使用
+            var dept = userDept || (function () { try {
+                var u = JSON.parse(localStorage.getItem('user') || '{}');
+                return u.department;
+            }
+            catch (_a) {
+                return undefined;
+            } })();
+            var isIT = !!dept && /資訊|系統|資安|IT/i.test(dept);
+            if (!isIT) {
+                // 導回首頁或顯示 403
+                router.replace('/');
             }
         }
     }, []);
-    var _e = react_1.useState([]), data = _e[0], setData = _e[1];
+    var _f = react_1.useState([]), data = _f[0], setData = _f[1];
     var form = antd_1.Form.useForm()[0];
-    var _f = react_1.useState(undefined), userId = _f[0], setUserId = _f[1];
-    var _g = react_1.useState([]), users = _g[0], setUsers = _g[1];
+    var _g = react_1.useState(undefined), userId = _g[0], setUserId = _g[1];
+    var _h = react_1.useState([]), users = _h[0], setUsers = _h[1];
     // 查詢條件狀態
-    var _h = react_1.useState(''), searchContent = _h[0], setSearchContent = _h[1];
-    var _j = react_1.useState(null), searchDateRange = _j[0], setSearchDateRange = _j[1];
-    var _k = react_1.useState(''), searchTask = _k[0], setSearchTask = _k[1];
-    var _l = react_1.useState(false), searchCollapsed = _l[0], setSearchCollapsed = _l[1];
-    var _m = react_1.useState(false), loading = _m[0], setLoading = _m[1];
-    var _o = react_1.useState({
+    var _j = react_1.useState(''), searchContent = _j[0], setSearchContent = _j[1];
+    var _k = react_1.useState(null), searchDateRange = _k[0], setSearchDateRange = _k[1];
+    var _l = react_1.useState(''), searchTask = _l[0], setSearchTask = _l[1];
+    var _m = react_1.useState(false), searchCollapsed = _m[0], setSearchCollapsed = _m[1];
+    var _o = react_1.useState(false), loading = _o[0], setLoading = _o[1];
+    var _p = react_1.useState({
         current: 1,
         pageSize: 10,
         total: 0
-    }), pagination = _o[0], setPagination = _o[1];
-    var _p = react_1.useState({}), sorter = _p[0], setSorter = _p[1];
+    }), pagination = _p[0], setPagination = _p[1];
+    var _q = react_1.useState({}), sorter = _q[0], setSorter = _q[1];
     // 查詢日誌
     var fetchLogs = function (paramsOverride) {
         if (paramsOverride === void 0) { paramsOverride = {}; }
@@ -352,7 +371,7 @@ function WorkLogBlock() {
         return excelDate;
     };
     // 匯入 Excel
-    var _q = react_1.useState(false), importing = _q[0], setImporting = _q[1];
+    var _r = react_1.useState(false), importing = _r[0], setImporting = _r[1];
     var handleImport = function (file) {
         if (!userId) {
             antd_1.message.error('請先選擇使用者');
@@ -497,15 +516,15 @@ function WorkLogBlock() {
     }); };
     // 狀態：多筆日誌填寫  陣列包裝多筆日誌資料 [{}] 代表多筆日誌的資料結構
     // 每一筆日誌包含日期、工作事項、作業內容、工時
-    var _r = react_1.useState([
+    var _s = react_1.useState([
         { date: '', task: '', content: '', hours: '' },
-    ]), multiLogs = _r[0], setMultiLogs = _r[1];
+    ]), multiLogs = _s[0], setMultiLogs = _s[1];
     // 欄位錯誤提示  使用<{ [k: number]: { [key: string]: string } }>來表示每一行的錯誤訊息
     // k: number 用於表示行索引，key: string 用於表示欄位名稱，value: string 用於表示錯誤訊息
     // 實際上的JS 是物件的形式，類似於 { 0: { date: '錯誤訊息' }, 1: { task: '錯誤訊息' } }
     // {K: number} 用於表示索引，{[key: string]: string} 用於表示欄位錯誤訊息
     // 這樣可以讓我們在物件中使用動態的鍵名，實際上存取時，會使用 rowErrors[idx][key] 來存取每一行的錯誤訊息
-    var _s = react_1.useState({}), rowErrors = _s[0], setRowErrors = _s[1];
+    var _t = react_1.useState({}), rowErrors = _t[0], setRowErrors = _t[1];
     // 新增一行
     var addLogRow = function () {
         return setMultiLogs(function (prev) { return __spreadArrays(prev, [
@@ -771,7 +790,7 @@ function WorkLogBlock() {
                     color: '#1a1a1a',
                     border: '1.5px solid #e3e9f7'
                 } },
-                React.createElement(antd_1.Table, { columns: columns(handleEdit, handleDelete, loginUserId).map(function (col) { return (__assign(__assign({}, col), { onCell: function () { return ({
+                React.createElement(antd_1.Table, { columns: columns(handleEdit, handleDelete, loginUserId, dateLocale).map(function (col) { return (__assign(__assign({}, col), { onCell: function () { return ({
                             style: {
                                 fontFamily: "'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif",
                                 fontSize: 17,

@@ -38,13 +38,37 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 var react_1 = require("react");
+var navigation_1 = require("next/navigation");
 var antd_1 = require("antd");
 var icons_1 = require("@ant-design/icons");
+var antd_2 = require("antd");
+var I18nProvider_1 = require("../components/I18nProvider");
 function TeamPage() {
     var _this = this;
+    var router = navigation_1.useRouter();
+    var locale = I18nProvider_1.useI18n().locale;
+    var dateLocale = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
+    react_1.useEffect(function () {
+        if (typeof window !== 'undefined') {
+            var isLogin = localStorage.getItem('isLogin') === '1';
+            if (!isLogin) {
+                router.replace('/login');
+                return;
+            }
+            try {
+                var u = JSON.parse(localStorage.getItem('user') || '{}');
+                var dept = u === null || u === void 0 ? void 0 : u.department;
+                var isIT = !!dept && /資訊|系統|資安|IT/i.test(dept);
+                if (!isIT)
+                    router.replace('/');
+            }
+            catch (_a) { }
+        }
+    }, []);
     var _a = react_1.useState([]), members = _a[0], setMembers = _a[1];
     var _b = react_1.useState(false), loading = _b[0], setLoading = _b[1];
     var _c = react_1.useState(false), modalVisible = _c[0], setModalVisible = _c[1];
+    var _d = react_1.useState(false), darkMode = _d[0], setDarkMode = _d[1];
     var form = antd_1.Form.useForm()[0];
     var fetchMembers = function () { return __awaiter(_this, void 0, void 0, function () {
         var response, result, error_1;
@@ -125,10 +149,19 @@ function TeamPage() {
             key: 'name'
         },
         {
-            title: '角色',
+            title: '職位',
             dataIndex: 'role',
-            key: 'role',
-            render: function (role) { return (React.createElement(antd_1.Tag, { color: role === '管理員' ? 'red' : 'blue' }, role)); }
+            key: 'role'
+        },
+        {
+            title: '部門',
+            dataIndex: 'department',
+            key: 'department'
+        },
+        {
+            title: '狀態',
+            dataIndex: 'status',
+            key: 'status'
         },
         {
             title: '負責專案數',
@@ -144,7 +177,9 @@ function TeamPage() {
             title: '平均完成進度',
             dataIndex: 'averageProgress',
             key: 'averageProgress',
-            render: function (progress) { return progress.toFixed(2) + "%"; }
+            render: function (progress) { return (React.createElement(antd_1.Tooltip, { title: "\u5E73\u5747\u5B8C\u6210\u9032\u5EA6\u70BA " + (progress !== null && progress !== void 0 ? progress : 0).toFixed(2) + "%" },
+                (progress !== null && progress !== void 0 ? progress : 0).toFixed(2),
+                "%")); }
         },
         {
             title: '電子郵件',
@@ -155,26 +190,69 @@ function TeamPage() {
             title: '加入時間',
             dataIndex: 'createdAt',
             key: 'createdAt',
-            render: function (date) { return new Date(date).toLocaleString(); }
+            render: function (date) {
+                if (!date)
+                    return '';
+                // 嘗試解析為 Date 並使用本地語系顯示日期時間
+                var d = new Date(date);
+                if (!isNaN(d.getTime())) {
+                    return d.toLocaleString(dateLocale, {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                }
+                // 回退：保留原始字串
+                return date;
+            }
         },
     ];
-    return (React.createElement("div", null,
-        React.createElement(antd_1.Card, { title: "\u5718\u968A\u7BA1\u7406", extra: React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () { return setModalVisible(true); } }, "\u6DFB\u52A0\u6210\u54E1") },
-            React.createElement(antd_1.Table, { columns: columns, dataSource: members, rowKey: "id", loading: loading })),
-        React.createElement(antd_1.Modal, { title: "\u6DFB\u52A0\u5718\u968A\u6210\u54E1", open: modalVisible, onCancel: function () { return setModalVisible(false); }, footer: null },
-            React.createElement(antd_1.Form, { form: form, layout: "vertical", onFinish: handleAddMember },
-                React.createElement(antd_1.Form.Item, { name: "name", label: "\u59D3\u540D", rules: [{ required: true, message: '請輸入姓名' }] },
-                    React.createElement(antd_1.Input, null)),
-                React.createElement(antd_1.Form.Item, { name: "role", label: "\u89D2\u8272", rules: [{ required: true, message: '請選擇角色' }] },
-                    React.createElement(antd_1.Select, null,
-                        React.createElement(antd_1.Select.Option, { value: "\u7BA1\u7406\u54E1" }, "\u7BA1\u7406\u54E1"),
-                        React.createElement(antd_1.Select.Option, { value: "\u6210\u54E1" }, "\u6210\u54E1"))),
-                React.createElement(antd_1.Form.Item, { name: "email", label: "\u96FB\u5B50\u90F5\u4EF6", rules: [
-                        { required: true, message: '請輸入電子郵件' },
-                        { type: 'email', message: '請輸入有效的電子郵件地址' }
-                    ] },
-                    React.createElement(antd_1.Input, null)),
-                React.createElement(antd_1.Form.Item, null,
-                    React.createElement(antd_1.Button, { type: "primary", htmlType: "submit" }, "\u78BA\u5B9A"))))));
+    return (React.createElement(antd_2.ConfigProvider, { theme: {
+            algorithm: darkMode ? antd_2.theme.darkAlgorithm : antd_2.theme.defaultAlgorithm
+        } },
+        React.createElement("div", { style: { padding: '24px' } },
+            React.createElement(antd_1.Card, { title: React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                    React.createElement("span", null, "\u5718\u968A\u7BA1\u7406")), extra: React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () { return setModalVisible(true); } }, "\u6DFB\u52A0\u6210\u54E1"), style: { borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' } },
+                React.createElement(antd_1.Table, { columns: columns, dataSource: members, rowKey: "id", loading: loading, pagination: {
+                        pageSize: 10,
+                        showSizeChanger: true,
+                        showTotal: function (total) { return "\u5171 " + total + " \u4F4D\u6210\u54E1"; }
+                    }, style: { borderRadius: '8px', overflow: 'hidden' } })),
+            React.createElement(antd_1.Modal, { title: "\u6DFB\u52A0\u5718\u968A\u6210\u54E1", open: modalVisible, onCancel: function () { return setModalVisible(false); }, footer: null },
+                React.createElement(antd_1.Form, { form: form, layout: "vertical", onFinish: handleAddMember },
+                    React.createElement(antd_1.Form.Item, { name: "name", label: "\u59D3\u540D", rules: [{ required: true, message: '請輸入姓名' }] },
+                        React.createElement(antd_1.Input, { placeholder: "\u8F38\u5165\u6210\u54E1\u59D3\u540D" })),
+                    React.createElement(antd_1.Form.Item, { name: "role", label: "\u8077\u4F4D", rules: [{ required: true, message: '請輸入職位' }] },
+                        React.createElement(antd_1.Select, { placeholder: "\u9078\u64C7\u8077\u4F4D", onChange: function (value) {
+                                if (value === 'security_officer') {
+                                    form.setFieldsValue({ department: '資安課' });
+                                }
+                                else if (value === 'developer') {
+                                    form.setFieldsValue({ department: '系統課' });
+                                }
+                                else if (value === 'project_manager') {
+                                    form.setFieldsValue({ department: '資訊部' });
+                                }
+                            } },
+                            React.createElement(antd_1.Select.Option, { value: "frontend_developer" }, "\u524D\u7AEF\u958B\u767C"),
+                            React.createElement(antd_1.Select.Option, { value: "backend_developer" }, "\u5F8C\u7AEF\u958B\u767C"),
+                            React.createElement(antd_1.Select.Option, { value: "developer" }, "\u8CC7\u8A0A\u5DE5\u7A0B\u5E2B"),
+                            React.createElement(antd_1.Select.Option, { value: "security_officer" }, "\u8CC7\u5B89\u5DE5\u7A0B\u5E2B"),
+                            React.createElement(antd_1.Select.Option, { value: "project_manager" }, "\u7D93\u7406"))),
+                    React.createElement(antd_1.Form.Item, { name: "department", label: "\u90E8\u9580", rules: [{ required: true, message: '請輸入部門' }] },
+                        React.createElement(antd_1.Select, { placeholder: "\u9078\u64C7\u90E8\u9580" },
+                            React.createElement(antd_1.Select.Option, { value: "\u8CC7\u8A0A\u90E8" }, "\u8CC7\u8A0A\u90E8"),
+                            React.createElement(antd_1.Select.Option, { value: "\u7CFB\u7D71\u8AB2" }, "\u7CFB\u7D71\u8AB2"),
+                            React.createElement(antd_1.Select.Option, { value: "\u8CC7\u5B89\u8AB2" }, "\u8CC7\u5B89\u8AB2"))),
+                    React.createElement(antd_1.Form.Item, { name: "email", label: "\u96FB\u5B50\u90F5\u4EF6", rules: [
+                            { required: true, message: '請輸入電子郵件' },
+                            { type: 'email', message: '請輸入有效的電子郵件地址' },
+                        ] },
+                        React.createElement(antd_1.Input, { placeholder: "\u8F38\u5165\u96FB\u5B50\u90F5\u4EF6" })),
+                    React.createElement(antd_1.Form.Item, null,
+                        React.createElement(antd_1.Button, { type: "primary", htmlType: "submit", block: true }, "\u78BA\u5B9A")))))));
 }
 exports["default"] = TeamPage;

@@ -49,18 +49,40 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 var react_1 = require("react");
+var navigation_1 = require("next/navigation");
 var antd_1 = require("antd");
 var icons_1 = require("@ant-design/icons");
 var dayjs_1 = require("dayjs");
+var GanttChart_1 = require("../components/GanttChart");
+var ExportButton_1 = require("../components/ExportButton");
+var ProjectTasksTable_1 = require("./ProjectTasksTable");
+var I18nProvider_1 = require("../components/I18nProvider");
 var Option = antd_1.Select.Option;
 function ProjectsPage() {
     var _this = this;
-    var _a = react_1.useState([]), projects = _a[0], setProjects = _a[1];
-    var _b = react_1.useState(false), loading = _b[0], setLoading = _b[1];
-    var _c = react_1.useState(false), modalVisible = _c[0], setModalVisible = _c[1];
+    var router = navigation_1.useRouter();
+    var _a = I18nProvider_1.useI18n(), t = _a.t, locale = _a.locale;
+    var dateLocale = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
+    react_1.useEffect(function () {
+        if (typeof window !== 'undefined') {
+            var isLogin = localStorage.getItem('isLogin') === '1';
+            if (!isLogin) {
+                router.replace('/login');
+            }
+        }
+    }, []);
+    var _b = react_1.useState([]), projects = _b[0], setProjects = _b[1];
+    var _c = react_1.useState(false), loading = _c[0], setLoading = _c[1];
+    var _d = react_1.useState(false), modalVisible = _d[0], setModalVisible = _d[1];
+    var _e = react_1.useState(null), editingProject = _e[0], setEditingProject = _e[1];
     var form = antd_1.Form.useForm()[0];
-    var _d = react_1.useState(null), editingId = _d[0], setEditingId = _d[1];
-    var _e = react_1.useState([]), teamMembers = _e[0], setTeamMembers = _e[1];
+    var _f = react_1.useState('list'), viewMode = _f[0], setViewMode = _f[1]; // 'list' or 'gantt'
+    // 篩選狀態
+    var _g = react_1.useState([]), selectedManagers = _g[0], setSelectedManagers = _g[1];
+    var _h = react_1.useState([]), selectedProjects = _h[0], setSelectedProjects = _h[1];
+    // 甘特圖任務數據
+    var _j = react_1.useState([]), ganttTasks = _j[0], setGanttTasks = _j[1];
+    var _k = react_1.useState([]), teamMembers = _k[0], setTeamMembers = _k[1];
     var fetchTeamMembers = function () { return __awaiter(_this, void 0, void 0, function () {
         var response, data, err_1;
         return __generator(this, function (_a) {
@@ -77,66 +99,107 @@ function ProjectsPage() {
                         setTeamMembers(data.data);
                     }
                     else {
-                        antd_1.message.error('獲取團隊成員列表失敗');
+                        antd_1.message.error(t('projects.error.fetchTeamMembers') || '獲取團隊成員列表失敗');
                     }
                     return [3 /*break*/, 4];
                 case 3:
                     err_1 = _a.sent();
                     console.error('獲取團隊成員列表錯誤:', err_1);
-                    antd_1.message.error('獲取團隊成員列表失敗');
+                    antd_1.message.error(t('projects.error.fetchTeamMembers') || '獲取團隊成員列表失敗');
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
             }
         });
     }); };
-    var fetchProjects = function () { return __awaiter(_this, void 0, void 0, function () {
-        var response, data, err_2;
+    // 獲取專案數據
+    var fetchProjects = function (managerIds, projectIds) { return __awaiter(_this, void 0, void 0, function () {
+        var url, params, response, result, ganttData, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 3, 4, 5]);
                     setLoading(true);
-                    return [4 /*yield*/, fetch('/api/projects')];
+                    _a.label = 1;
                 case 1:
+                    _a.trys.push([1, 4, 5, 6]);
+                    url = '/api/projects';
+                    params = [];
+                    if (managerIds && managerIds.length > 0)
+                        params.push("managerId=" + managerIds.join(','));
+                    if (projectIds && projectIds.length > 0)
+                        params.push("projectId=" + projectIds.join(','));
+                    if (params.length > 0)
+                        url += '?' + params.join('&');
+                    return [4 /*yield*/, fetch(url)];
+                case 2:
                     response = _a.sent();
                     return [4 /*yield*/, response.json()];
-                case 2:
-                    data = _a.sent();
-                    if (data.success) {
-                        setProjects(data.data);
+                case 3:
+                    result = _a.sent();
+                    if (result.success) {
+                        setProjects(result.data);
+                        ganttData = result.data.map(function (project) { return ({
+                            id: "Project-" + project.id,
+                            name: project.name,
+                            start: new Date(project.startDate),
+                            end: new Date(project.endDate),
+                            progress: project.averageProgress ? project.averageProgress / 100 : 0,
+                            type: 'project',
+                            hideChildren: false,
+                            displayOrder: project.id,
+                            styles: {
+                                backgroundColor: getStatusColor(project.status),
+                                progressColor: '#1890ff'
+                            }
+                        }); });
+                        setGanttTasks(ganttData);
                     }
                     else {
-                        antd_1.message.error('獲取專案列表失敗');
+                        antd_1.message.error(t('projects.error.fetch') || '獲取專案數據失敗');
                     }
-                    return [3 /*break*/, 5];
-                case 3:
-                    err_2 = _a.sent();
-                    console.error('獲取專案列表錯誤:', err_2);
-                    antd_1.message.error('獲取專案列表失敗');
-                    return [3 /*break*/, 5];
+                    return [3 /*break*/, 6];
                 case 4:
+                    error_1 = _a.sent();
+                    console.error('獲取專案失敗:', error_1);
+                    antd_1.message.error(t('projects.error.fetch') || '獲取專案數據失敗');
+                    return [3 /*break*/, 6];
+                case 5:
                     setLoading(false);
                     return [7 /*endfinally*/];
-                case 5: return [2 /*return*/];
+                case 6: return [2 /*return*/];
             }
         });
     }); };
+    // 獲取狀態顏色
+    var getStatusColor = function (status) {
+        switch (status) {
+            case '進行中': return '#1890ff';
+            case '已完成': return '#52c41a';
+            case '延遲': return '#ff4d4f';
+            case '等待中': return '#faad14';
+            default: return '#d9d9d9';
+        }
+    };
+    // 渲染狀態標籤
+    var renderStatusTag = function (status) {
+        var color = getStatusColor(status);
+        return React.createElement(antd_1.Tag, { color: color }, status);
+    };
     react_1.useEffect(function () {
-        fetchProjects();
+        fetchProjects(selectedManagers, selectedProjects);
         fetchTeamMembers();
-    }, []);
+    }, [selectedManagers, selectedProjects]);
     var handleAdd = function () {
-        setEditingId(null);
+        setEditingProject(null);
         form.resetFields();
         setModalVisible(true);
     };
     var handleEdit = function (record) {
-        setEditingId(record.id);
+        setEditingProject(record);
         form.setFieldsValue(__assign(__assign({}, record), { startDate: dayjs_1["default"](record.startDate), endDate: dayjs_1["default"](record.endDate) }));
         setModalVisible(true);
     };
     var handleDelete = function (id) { return __awaiter(_this, void 0, void 0, function () {
-        var response, data, err_3;
+        var response, data, err_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -150,24 +213,24 @@ function ProjectsPage() {
                 case 2:
                     data = _a.sent();
                     if (data.success) {
-                        antd_1.message.success('刪除成功');
+                        antd_1.message.success(t('common.delete.success') || '刪除成功');
                         fetchProjects();
                     }
                     else {
-                        antd_1.message.error('刪除失敗');
+                        antd_1.message.error(t('common.delete.fail') || '刪除失敗');
                     }
                     return [3 /*break*/, 4];
                 case 3:
-                    err_3 = _a.sent();
-                    console.error('刪除專案錯誤:', err_3);
-                    antd_1.message.error('刪除失敗');
+                    err_2 = _a.sent();
+                    console.error('刪除專案錯誤:', err_2);
+                    antd_1.message.error(t('common.delete.fail') || '刪除失敗');
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
             }
         });
     }); };
     var handleSubmit = function () { return __awaiter(_this, void 0, void 0, function () {
-        var values, projectData, url, method, body, response, data, err_4;
+        var values, projectData, url, method, body, response, data, err_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -176,9 +239,9 @@ function ProjectsPage() {
                 case 1:
                     values = _a.sent();
                     projectData = __assign(__assign({}, values), { startDate: values.startDate.format('YYYY-MM-DD'), endDate: values.endDate.format('YYYY-MM-DD') });
-                    url = editingId ? '/api/projects' : '/api/projects';
-                    method = editingId ? 'PUT' : 'POST';
-                    body = editingId ? __assign(__assign({}, projectData), { id: editingId }) : projectData;
+                    url = editingProject ? '/api/projects' : '/api/projects';
+                    method = editingProject ? 'PUT' : 'POST';
+                    body = editingProject ? __assign(__assign({}, projectData), { id: editingProject.id }) : projectData;
                     return [4 /*yield*/, fetch(url, {
                             method: method,
                             headers: {
@@ -192,18 +255,18 @@ function ProjectsPage() {
                 case 3:
                     data = _a.sent();
                     if (data.success) {
-                        antd_1.message.success(editingId ? '更新成功' : '創建成功');
+                        antd_1.message.success(editingProject ? (t('common.update.success') || '更新成功') : (t('common.create.success') || '創建成功'));
                         setModalVisible(false);
                         fetchProjects();
                     }
                     else {
-                        antd_1.message.error(editingId ? '更新失敗' : '創建失敗');
+                        antd_1.message.error(editingProject ? (t('common.update.fail') || '更新失敗') : (t('common.create.fail') || '創建失敗'));
                     }
                     return [3 /*break*/, 5];
                 case 4:
-                    err_4 = _a.sent();
-                    console.error('提交表單錯誤:', err_4);
-                    antd_1.message.error('提交失敗');
+                    err_3 = _a.sent();
+                    console.error('提交表單錯誤:', err_3);
+                    antd_1.message.error(t('common.submit.fail') || '提交失敗');
                     return [3 /*break*/, 5];
                 case 5: return [2 /*return*/];
             }
@@ -211,7 +274,7 @@ function ProjectsPage() {
     }); };
     var columns = [
         {
-            title: '專案名稱',
+            title: t('projects.columns.name'),
             dataIndex: 'name',
             key: 'name',
             render: function (text, record) { return (React.createElement(antd_1.Space, { direction: "vertical", size: "small" },
@@ -219,7 +282,7 @@ function ProjectsPage() {
                 React.createElement("span", { style: { color: '#666', fontSize: '12px' } }, record.description))); }
         },
         {
-            title: '負責人',
+            title: t('projects.columns.manager'),
             dataIndex: 'managerId',
             key: 'managerId',
             render: function (text, record) {
@@ -228,7 +291,7 @@ function ProjectsPage() {
             }
         },
         {
-            title: '狀態',
+            title: t('projects.columns.status'),
             dataIndex: 'status',
             key: 'status',
             render: function (status) {
@@ -239,7 +302,7 @@ function ProjectsPage() {
                     '已取消': 'default'
                 };
                 return (React.createElement(antd_1.Select, { value: status, style: { width: 100 }, onChange: function (value) { return __awaiter(_this, void 0, void 0, function () {
-                        var response, data, err_5;
+                        var response, data, err_4;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -257,76 +320,104 @@ function ProjectsPage() {
                                 case 2:
                                     data = _a.sent();
                                     if (data.success) {
-                                        antd_1.message.success('狀態更新成功');
+                                        antd_1.message.success(t('common.update.success') || '狀態更新成功');
                                         fetchProjects();
                                     }
                                     else {
-                                        antd_1.message.error('狀態更新失敗');
+                                        antd_1.message.error(t('common.update.fail') || '狀態更新失敗');
                                     }
                                     return [3 /*break*/, 4];
                                 case 3:
-                                    err_5 = _a.sent();
-                                    console.error('更新狀態錯誤:', err_5);
-                                    antd_1.message.error('狀態更新失敗');
+                                    err_4 = _a.sent();
+                                    console.error('更新狀態錯誤:', err_4);
+                                    antd_1.message.error(t('common.update.fail') || '狀態更新失敗');
                                     return [3 /*break*/, 4];
                                 case 4: return [2 /*return*/];
                             }
                         });
                     }); } },
-                    React.createElement(Option, { value: "\u9032\u884C\u4E2D" }, "\u9032\u884C\u4E2D"),
-                    React.createElement(Option, { value: "\u5DF2\u5B8C\u6210" }, "\u5DF2\u5B8C\u6210"),
-                    React.createElement(Option, { value: "\u5DF2\u66AB\u505C" }, "\u5DF2\u66AB\u505C"),
-                    React.createElement(Option, { value: "\u5DF2\u53D6\u6D88" }, "\u5DF2\u53D6\u6D88")));
+                    React.createElement(Option, { value: "\u9032\u884C\u4E2D" }, t('projects.status.inProgress')),
+                    React.createElement(Option, { value: "\u5DF2\u5B8C\u6210" }, t('projects.status.completed')),
+                    React.createElement(Option, { value: "\u5DF2\u66AB\u505C" }, t('projects.status.paused')),
+                    React.createElement(Option, { value: "\u5DF2\u53D6\u6D88" }, t('projects.status.canceled'))));
             }
         },
         {
-            title: '進度',
+            title: t('projects.columns.progress'),
             key: 'progress',
             render: function (_, record) { return (React.createElement(antd_1.Space, { direction: "vertical", size: "small", style: { width: '100%' } },
                 React.createElement(antd_1.Progress, { percent: Math.round(record.averageProgress || 0), size: "small", status: record.averageProgress === 100 ? 'success' : 'active' }),
                 React.createElement("span", { style: { fontSize: '12px', color: '#666' } },
                     record.taskCount || 0,
-                    " \u500B\u4EFB\u52D9"))); }
+                    " ",
+                    t('tasks.title')))); }
         },
         {
-            title: '時間',
+            title: t('projects.columns.time'),
             key: 'time',
             render: function (_, record) { return (React.createElement(antd_1.Space, { direction: "vertical", size: "small" },
                 React.createElement("span", null,
-                    "\u958B\u59CB\uFF1A",
-                    dayjs_1["default"](record.startDate).format('YYYY-MM-DD')),
+                    t('projects.time.start'),
+                    new Date(record.startDate).toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' })),
                 React.createElement("span", null,
-                    "\u7D50\u675F\uFF1A",
-                    dayjs_1["default"](record.endDate).format('YYYY-MM-DD')))); }
+                    t('projects.time.end'),
+                    new Date(record.endDate).toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' })))); }
         },
         {
-            title: '操作',
+            title: t('projects.columns.actions'),
             key: 'action',
             render: function (_, record) { return (React.createElement(antd_1.Space, null,
-                React.createElement(antd_1.Button, { type: "text", icon: React.createElement(icons_1.EditOutlined, null), onClick: function () { return handleEdit(record); } }, "\u7DE8\u8F2F"),
-                React.createElement(antd_1.Button, { type: "text", danger: true, icon: React.createElement(icons_1.DeleteOutlined, null), onClick: function () { return handleDelete(record.id); } }, "\u522A\u9664"))); }
+                React.createElement(antd_1.Button, { type: "text", icon: React.createElement(icons_1.EditOutlined, null), onClick: function () { return handleEdit(record); } }, t('common.edit') || '編輯'),
+                React.createElement(antd_1.Button, { type: "text", danger: true, icon: React.createElement(icons_1.DeleteOutlined, null), onClick: function () { return handleDelete(record.id); } }, t('common.delete') || '刪除'))); }
         }
     ];
+    // 準備匯出數據
+    var exportColumns = [
+        { title: '專案名稱', dataIndex: 'name' },
+        { title: '描述', dataIndex: 'description' },
+        { title: '狀態', dataIndex: 'status' },
+        { title: '進度', dataIndex: 'averageProgress' },
+        { title: '開始日期', dataIndex: 'startDateFormatted' },
+        { title: '結束日期', dataIndex: 'endDateFormatted' },
+        { title: '任務數量', dataIndex: 'taskCount' },
+    ];
+    var exportData = projects.map(function (project) { return (__assign(__assign({}, project), { startDateFormatted: dayjs_1["default"](project.startDate).format('YYYY-MM-DD'), endDateFormatted: dayjs_1["default"](project.endDate).format('YYYY-MM-DD'), averageProgress: (project.averageProgress || 0) + "%" })); });
     return (React.createElement("div", { style: { padding: '24px' } },
-        React.createElement(antd_1.Card, { title: "\u5C08\u6848\u7BA1\u7406", extra: React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: handleAdd }, "\u65B0\u589E\u5C08\u6848") },
-            React.createElement(antd_1.Table, { columns: columns, dataSource: projects, rowKey: "id", loading: loading })),
-        React.createElement(antd_1.Modal, { title: editingId ? '編輯專案' : '新增專案', open: modalVisible, onOk: handleSubmit, onCancel: function () { return setModalVisible(false); } },
+        React.createElement(antd_1.Card, { title: t('projects.title'), extra: React.createElement(antd_1.Space, null,
+                React.createElement(ExportButton_1["default"], { data: exportData, columns: exportColumns, fileName: t('projects.actions.exportReport'), buttonText: t('projects.actions.exportButton') }),
+                React.createElement(antd_1.Button, { type: viewMode === 'list' ? 'primary' : 'default', onClick: function () { return setViewMode('list'); }, icon: React.createElement(icons_1.BarsOutlined, null) }, t('projects.actions.view.list')),
+                React.createElement(antd_1.Button, { type: viewMode === 'gantt' ? 'primary' : 'default', onClick: function () { return setViewMode('gantt'); }, icon: React.createElement(icons_1.ScheduleOutlined, null) }, t('projects.actions.view.gantt')),
+                React.createElement(antd_1.Button, { type: "primary", icon: React.createElement(icons_1.PlusOutlined, null), onClick: function () {
+                        setEditingProject(null);
+                        form.resetFields();
+                        setModalVisible(true);
+                    } }, t('projects.actions.add'))) },
+            React.createElement(antd_1.Space, { style: { marginBottom: 16 } },
+                React.createElement(antd_1.Select, { mode: "multiple", allowClear: true, style: { minWidth: 180 }, placeholder: t('projects.filter.manager'), value: selectedManagers, onChange: setSelectedManagers }, teamMembers.map(function (member) { return (React.createElement(Option, { key: member.id, value: member.id }, member.name)); })),
+                React.createElement(antd_1.Select, { mode: "multiple", allowClear: true, style: { minWidth: 180 }, placeholder: t('projects.filter.project'), value: selectedProjects, onChange: setSelectedProjects }, projects.map(function (project) { return (React.createElement(Option, { key: project.id, value: project.id }, project.name)); }))),
+            viewMode === 'list' ? (React.createElement(antd_1.Table, { columns: columns, dataSource: projects, rowKey: "id", loading: loading, expandable: {
+                    expandedRowRender: function (record) { return React.createElement(ProjectTasksTable_1["default"], { projectId: record.id }); },
+                    expandRowByClick: true
+                } })) : (React.createElement(GanttChart_1["default"], { tasks: ganttTasks }))),
+        React.createElement(antd_1.Modal, { title: editingProject ? t('projects.modal.edit') : t('projects.modal.add'), open: modalVisible, onCancel: function () { return setModalVisible(false); }, footer: null },
             React.createElement(antd_1.Form, { form: form, layout: "vertical" },
-                React.createElement(antd_1.Form.Item, { name: "name", label: "\u5C08\u6848\u540D\u7A31", rules: [{ required: true, message: '請輸入專案名稱' }] },
+                React.createElement(antd_1.Form.Item, { name: "name", label: t('projects.form.name'), rules: [{ required: true, message: t('projects.form.name.required') }] },
                     React.createElement(antd_1.Input, null)),
-                React.createElement(antd_1.Form.Item, { name: "managerId", label: "\u8CA0\u8CAC\u4EBA", rules: [{ required: true, message: '請選擇負責人' }] },
+                React.createElement(antd_1.Form.Item, { name: "managerId", label: t('projects.form.manager'), rules: [{ required: true, message: t('projects.form.manager.required') }] },
                     React.createElement(antd_1.Select, null, teamMembers.map(function (member) { return (React.createElement(Option, { key: member.id, value: member.id }, member.name)); }))),
-                React.createElement(antd_1.Form.Item, { name: "description", label: "\u5C08\u6848\u63CF\u8FF0" },
+                React.createElement(antd_1.Form.Item, { name: "description", label: t('projects.form.description') },
                     React.createElement(antd_1.Input.TextArea, null)),
-                React.createElement(antd_1.Form.Item, { name: "status", label: "\u72C0\u614B", rules: [{ required: true, message: '請選擇狀態' }] },
+                React.createElement(antd_1.Form.Item, { name: "status", label: t('projects.form.status'), rules: [{ required: true, message: t('projects.form.status.required') }] },
                     React.createElement(antd_1.Select, null,
-                        React.createElement(Option, { value: "\u9032\u884C\u4E2D" }, "\u9032\u884C\u4E2D"),
-                        React.createElement(Option, { value: "\u5DF2\u5B8C\u6210" }, "\u5DF2\u5B8C\u6210"),
-                        React.createElement(Option, { value: "\u5DF2\u66AB\u505C" }, "\u5DF2\u66AB\u505C"),
-                        React.createElement(Option, { value: "\u5DF2\u53D6\u6D88" }, "\u5DF2\u53D6\u6D88"))),
-                React.createElement(antd_1.Form.Item, { name: "startDate", label: "\u958B\u59CB\u65E5\u671F", rules: [{ required: true, message: '請選擇開始日期' }] },
+                        React.createElement(Option, { value: "\u9032\u884C\u4E2D" }, t('projects.status.inProgress')),
+                        React.createElement(Option, { value: "\u5DF2\u5B8C\u6210" }, t('projects.status.completed')),
+                        React.createElement(Option, { value: "\u5DF2\u66AB\u505C" }, t('projects.status.paused')),
+                        React.createElement(Option, { value: "\u5DF2\u53D6\u6D88" }, t('projects.status.canceled')))),
+                React.createElement(antd_1.Form.Item, { name: "startDate", label: t('projects.form.startDate'), rules: [{ required: true, message: t('projects.form.startDate.required') }] },
                     React.createElement(antd_1.DatePicker, { style: { width: '100%' } })),
-                React.createElement(antd_1.Form.Item, { name: "endDate", label: "\u7D50\u675F\u65E5\u671F", rules: [{ required: true, message: '請選擇結束日期' }] },
-                    React.createElement(antd_1.DatePicker, { style: { width: '100%' } }))))));
+                React.createElement(antd_1.Form.Item, { name: "endDate", label: t('projects.form.endDate'), rules: [{ required: true, message: t('projects.form.endDate.required') }] },
+                    React.createElement(antd_1.DatePicker, { style: { width: '100%' } })),
+                React.createElement(antd_1.Form.Item, null,
+                    React.createElement(antd_1.Button, { type: "primary", onClick: handleSubmit, block: true }, editingProject ? t('projects.actions.update') : t('projects.actions.add')))))));
 }
 exports["default"] = ProjectsPage;

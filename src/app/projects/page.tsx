@@ -12,6 +12,7 @@ import GanttChart from '../components/GanttChart';
 import ExportButton from '../components/ExportButton';
 import ProjectTasksTable from './ProjectTasksTable';
 import { Task, ViewMode } from 'gantt-task-react';
+import { useI18n } from '../components/I18nProvider';
 
 interface Project {
   id: number;
@@ -39,6 +40,8 @@ const { Option } = Select;
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const dateLocale = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isLogin = localStorage.getItem('isLogin') === '1';
@@ -69,11 +72,11 @@ export default function ProjectsPage() {
       if (data.success) {
         setTeamMembers(data.data);
       } else {
-        message.error('獲取團隊成員列表失敗');
+        message.error(t('projects.error.fetchTeamMembers') || '獲取團隊成員列表失敗');
       }
     } catch (err) {
       console.error('獲取團隊成員列表錯誤:', err);
-      message.error('獲取團隊成員列表失敗');
+      message.error(t('projects.error.fetchTeamMembers') || '獲取團隊成員列表失敗');
     }
   };
 
@@ -107,11 +110,11 @@ export default function ProjectsPage() {
         }));
         setGanttTasks(ganttData);
       } else {
-        message.error('獲取專案數據失敗');
+        message.error(t('projects.error.fetch') || '獲取專案數據失敗');
       }
     } catch (error) {
       console.error('獲取專案失敗:', error);
-      message.error('獲取專案數據失敗');
+      message.error(t('projects.error.fetch') || '獲取專案數據失敗');
     } finally {
       setLoading(false);
     }
@@ -162,14 +165,14 @@ export default function ProjectsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        message.success('刪除成功');
+        message.success(t('common.delete.success') || '刪除成功');
         fetchProjects();
       } else {
-        message.error('刪除失敗');
+        message.error(t('common.delete.fail') || '刪除失敗');
       }
     } catch (err) {
       console.error('刪除專案錯誤:', err);
-      message.error('刪除失敗');
+      message.error(t('common.delete.fail') || '刪除失敗');
     }
   };
 
@@ -196,21 +199,21 @@ export default function ProjectsPage() {
 
       const data = await response.json();
       if (data.success) {
-        message.success(editingProject ? '更新成功' : '創建成功');
+        message.success(editingProject ? (t('common.update.success') || '更新成功') : (t('common.create.success') || '創建成功'));
         setModalVisible(false);
         fetchProjects();
       } else {
-        message.error(editingProject ? '更新失敗' : '創建失敗');
+        message.error(editingProject ? (t('common.update.fail') || '更新失敗') : (t('common.create.fail') || '創建失敗'));
       }
     } catch (err) {
       console.error('提交表單錯誤:', err);
-      message.error('提交失敗');
+      message.error(t('common.submit.fail') || '提交失敗');
     }
   };
 
   const columns: ColumnsType<Project> = [
     {
-      title: '專案名稱',
+      title: t('projects.columns.name'),
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
@@ -221,7 +224,7 @@ export default function ProjectsPage() {
       )
     },
     {
-      title: '負責人',
+      title: t('projects.columns.manager'),
       dataIndex: 'managerId',
       key: 'managerId',
       render: (text, record) => (
@@ -229,7 +232,7 @@ export default function ProjectsPage() {
       )
     },
     {
-      title: '狀態',
+      title: t('projects.columns.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status) => {
@@ -255,27 +258,27 @@ export default function ProjectsPage() {
                 });
                 const data = await response.json();
                 if (data.success) {
-                  message.success('狀態更新成功');
+                  message.success(t('common.update.success') || '狀態更新成功');
                   fetchProjects();
                 } else {
-                  message.error('狀態更新失敗');
+                  message.error(t('common.update.fail') || '狀態更新失敗');
                 }
               } catch (err) {
                 console.error('更新狀態錯誤:', err);
-                message.error('狀態更新失敗');
+                message.error(t('common.update.fail') || '狀態更新失敗');
               }
             }}
           >
-            <Option value="進行中">進行中</Option>
-            <Option value="已完成">已完成</Option>
-            <Option value="已暫停">已暫停</Option>
-            <Option value="已取消">已取消</Option>
+            <Option value="進行中">{t('projects.status.inProgress')}</Option>
+            <Option value="已完成">{t('projects.status.completed')}</Option>
+            <Option value="已暫停">{t('projects.status.paused')}</Option>
+            <Option value="已取消">{t('projects.status.canceled')}</Option>
           </Select>
         );
       }
     },
     {
-      title: '進度',
+      title: t('projects.columns.progress'),
       key: 'progress',
       render: (_, record) => (
         <Space direction="vertical" size="small" style={{ width: '100%' }}>
@@ -285,23 +288,29 @@ export default function ProjectsPage() {
             status={record.averageProgress === 100 ? 'success' : 'active'}
           />
           <span style={{ fontSize: '12px', color: '#666' }}>
-            {record.taskCount || 0} 個任務
+            {record.taskCount || 0} {t('tasks.title')}
           </span>
         </Space>
       )
     },
     {
-      title: '時間',
+      title: t('projects.columns.time'),
       key: 'time',
       render: (_, record) => (
         <Space direction="vertical" size="small">
-          <span>開始：{dayjs(record.startDate).format('YYYY-MM-DD')}</span>
-          <span>結束：{dayjs(record.endDate).format('YYYY-MM-DD')}</span>
+          <span>
+            {t('projects.time.start')}
+            {new Date(record.startDate).toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' })}
+          </span>
+          <span>
+            {t('projects.time.end')}
+            {new Date(record.endDate).toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' })}
+          </span>
         </Space>
       )
     },
     {
-      title: '操作',
+      title: t('projects.columns.actions'),
       key: 'action',
       render: (_, record) => (
         <Space>
@@ -310,7 +319,7 @@ export default function ProjectsPage() {
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           >
-            編輯
+            {t('common.edit') || '編輯'}
           </Button>
           <Button
             type="text"
@@ -318,7 +327,7 @@ export default function ProjectsPage() {
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
           >
-            刪除
+            {t('common.delete') || '刪除'}
           </Button>
         </Space>
       )
@@ -346,28 +355,28 @@ export default function ProjectsPage() {
   return (
     <div style={{ padding: '24px' }}>
       <Card 
-        title="專案管理"
+        title={t('projects.title')}
         extra={
           <Space>
             <ExportButton
               data={exportData}
               columns={exportColumns}
-              fileName="專案報表"
-              buttonText="匯出專案報表"
+              fileName={t('projects.actions.exportReport')}
+              buttonText={t('projects.actions.exportButton')}
             />
             <Button 
               type={viewMode === 'list' ? 'primary' : 'default'} 
               onClick={() => setViewMode('list')}
               icon={<BarsOutlined />}
             >
-              列表視圖
+              {t('projects.actions.view.list')}
             </Button>
             <Button 
               type={viewMode === 'gantt' ? 'primary' : 'default'} 
               onClick={() => setViewMode('gantt')}
               icon={<ScheduleOutlined />}
             >
-              甘特圖視圖
+              {t('projects.actions.view.gantt')}
             </Button>
             <Button
               type="primary"
@@ -378,7 +387,7 @@ export default function ProjectsPage() {
                 setModalVisible(true);
               }}
             >
-              新增專案
+              {t('projects.actions.add')}
             </Button>
           </Space>
         }
@@ -389,7 +398,7 @@ export default function ProjectsPage() {
             mode="multiple"
             allowClear
             style={{ minWidth: 180 }}
-            placeholder="篩選負責人"
+            placeholder={t('projects.filter.manager')}
             value={selectedManagers}
             onChange={setSelectedManagers}
           >
@@ -401,7 +410,7 @@ export default function ProjectsPage() {
             mode="multiple"
             allowClear
             style={{ minWidth: 180 }}
-            placeholder="篩選專案"
+            placeholder={t('projects.filter.project')}
             value={selectedProjects}
             onChange={setSelectedProjects}
           >
@@ -427,7 +436,7 @@ export default function ProjectsPage() {
       </Card>
 
       <Modal
-        title={editingProject ? '編輯專案' : '新增專案'}
+        title={editingProject ? t('projects.modal.edit') : t('projects.modal.add')}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
@@ -438,15 +447,15 @@ export default function ProjectsPage() {
         >
           <Form.Item
             name="name"
-            label="專案名稱"
-            rules={[{ required: true, message: '請輸入專案名稱' }]}
+            label={t('projects.form.name')}
+            rules={[{ required: true, message: t('projects.form.name.required') }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
             name="managerId"
-            label="負責人"
-            rules={[{ required: true, message: '請選擇負責人' }]}
+            label={t('projects.form.manager')}
+            rules={[{ required: true, message: t('projects.form.manager.required') }]}
           >
             <Select>
               {teamMembers.map((member) => (
@@ -458,40 +467,40 @@ export default function ProjectsPage() {
           </Form.Item>
           <Form.Item
             name="description"
-            label="專案描述"
+            label={t('projects.form.description')}
           >
             <Input.TextArea />
           </Form.Item>
           <Form.Item
             name="status"
-            label="狀態"
-            rules={[{ required: true, message: '請選擇狀態' }]}
+            label={t('projects.form.status')}
+            rules={[{ required: true, message: t('projects.form.status.required') }]}
           >
             <Select>
-              <Option value="進行中">進行中</Option>
-              <Option value="已完成">已完成</Option>
-              <Option value="已暫停">已暫停</Option>
-              <Option value="已取消">已取消</Option>
+              <Option value="進行中">{t('projects.status.inProgress')}</Option>
+              <Option value="已完成">{t('projects.status.completed')}</Option>
+              <Option value="已暫停">{t('projects.status.paused')}</Option>
+              <Option value="已取消">{t('projects.status.canceled')}</Option>
             </Select>
           </Form.Item>
           <Form.Item
             name="startDate"
-            label="開始日期"
-            rules={[{ required: true, message: '請選擇開始日期' }]}
+            label={t('projects.form.startDate')}
+            rules={[{ required: true, message: t('projects.form.startDate.required') }]}
           >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             name="endDate"
-            label="結束日期"
-            rules={[{ required: true, message: '請選擇結束日期' }]}
+            label={t('projects.form.endDate')}
+            rules={[{ required: true, message: t('projects.form.endDate.required') }]}
           >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
 
           <Form.Item>
             <Button type="primary" onClick={handleSubmit} block>
-              {editingProject ? '更新專案' : '新增專案'}
+              {editingProject ? t('projects.actions.update') : t('projects.actions.add')}
             </Button>
           </Form.Item>
         </Form>

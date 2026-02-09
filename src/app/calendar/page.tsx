@@ -3,6 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, Button, Modal, Form, Input, DatePicker, Select, message, Popconfirm, Space } from 'antd';
 import dayjs from 'dayjs';
+import 'dayjs/locale/zh-tw';
+import 'dayjs/locale/ja';
+import 'dayjs/locale/en';
+import { useI18n } from '../components/I18nProvider';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -27,6 +31,9 @@ interface CalendarEventDTO {
 interface CalendarEventUI extends CalendarEventDTO { start: Date; end: Date; }
 
 export default function CalendarPage() {
+  const { locale, t } = useI18n();
+  // 切換 dayjs 語系，使 react-big-calendar 的本地化日期與月份名稱一致
+  dayjs.locale(locale === 'en' ? 'en' : locale === 'ja' ? 'ja' : 'zh-tw');
   const [mounted, setMounted] = useState(false);
   const [events, setEvents] = useState<CalendarEventUI[]>([]);
   const [loading, setLoading] = useState(false);
@@ -192,7 +199,15 @@ export default function CalendarPage() {
             onSelectSlot={onSelectSlot}
             onSelectEvent={onSelectEvent}
             eventPropGetter={eventPropGetter}
-            messages={{ today: '今天', previous: '上一頁', next: '下一頁', month: '月', week: '週', day: '日', agenda: '列表' }}
+            messages={{
+              today: t('calendar.messages.today'),
+              previous: t('calendar.messages.previous'),
+              next: t('calendar.messages.next'),
+              month: t('calendar.messages.month'),
+              week: t('calendar.messages.week'),
+              day: t('calendar.messages.day'),
+              agenda: t('calendar.messages.agenda')
+            }}
           />
         </div>
       </Card>

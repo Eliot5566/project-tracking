@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Tooltip } from 'antd';
 import { PlusOutlined, BulbOutlined } from '@ant-design/icons';
 import { ConfigProvider, theme } from 'antd';
+import { useI18n } from '../components/I18nProvider';
 
 interface TeamMember {
   id: number;
@@ -29,12 +30,21 @@ interface TeamMemberFormData {
 
 export default function TeamPage() {
   const router = useRouter();
+  const { locale } = useI18n();
+  const dateLocale = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'zh-TW';
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isLogin = localStorage.getItem('isLogin') === '1';
       if (!isLogin) {
         router.replace('/login');
+        return;
       }
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const dept = u?.department as string | undefined;
+        const isIT = !!dept && /資訊|系統|資安|IT/i.test(dept);
+        if (!isIT) router.replace('/');
+      } catch {}
     }
   }, []);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -143,15 +153,19 @@ export default function TeamPage() {
       key: 'createdAt',
       render: (date: string) => {
         if (!date) return '';
-        // MSSQL 格式 yyyy-MM-dd HH:mm:ss.fff 取到秒並轉為 yyyy/MM/dd HH:mm:ss
-        const mssql = date.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
-        if (mssql) return mssql[0].replace(/-/g, '/');
-        // ISO 格式 2025-06-12T11:10:45.800Z 取前19字元並轉為 yyyy/MM/dd HH:mm:ss
-        if (date.length >= 19 && date[10] === 'T') {
-          const d = date.slice(0, 10).replace(/-/g, '/');
-          const t = date.slice(11, 19);
-          return `${d} ${t}`;
+        // 嘗試解析為 Date 並使用本地語系顯示日期時間
+        const d = new Date(date);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleString(dateLocale, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
         }
+        // 回退：保留原始字串
         return date;
       },
     },

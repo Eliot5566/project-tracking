@@ -42,28 +42,72 @@ var db_1 = require("@/lib/db");
 // 獲取所有專案
 function GET(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var searchParams, status, sqlQuery, params, conditions, projects, error_1;
+        var searchParams, status, managerId, projectId, sqlQuery, params, conditions, paramIdx_1, ids, ids, projects, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 2, , 3]);
                     searchParams = new URL(request.url).searchParams;
                     status = searchParams.get('status');
+                    managerId = searchParams.get('managerId');
+                    projectId = searchParams.get('projectId');
                     sqlQuery = "\n      SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.managerId,\n        tm.name as managerName,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n      FROM Projects p\n      LEFT JOIN TeamMembers tm ON p.managerId = tm.id\n      LEFT JOIN Tasks t ON p.id = t.projectId\n    ";
                     params = [];
                     conditions = [];
+                    paramIdx_1 = 0;
+                    // 如果有 status, managerId, projectId，則添加到條件中
                     if (status) {
-                        conditions.push('p.status = @param0');
+                        // 將 status 添加到條件中
+                        // 使用 @param0, @param1 等格式來避免 SQL 注入 例如: @param0 = 'active'
+                        conditions.push("p.status = @param" + paramIdx_1); // 使用 @param0 來表示第一個參數 呈現 p.status = @param0
+                        // 將 status 添加到 params 中
+                        // params = ['active'] 例如: 如果 status = 'active'
+                        // params.push(status); 這樣就可以在查詢時使用 @param0
                         params.push(status);
+                        paramIdx_1++;
                     }
+                    // 如果有 managerId，則添加到條件中
+                    // managerId 可以是多個 ID 以逗號分隔，例如: '1,2,3'
+                    // 需要將其拆分成數組並生成相應的 SQL 條件
+                    if (managerId) {
+                        ids = managerId
+                            .split(',')
+                            .map(function (id) { return id.trim(); })
+                            .filter(Boolean);
+                        if (ids.length > 0) {
+                            conditions.push("p.managerId IN (" + ids
+                                .map(function (_, i) { return "@param" + (paramIdx_1 + i); })
+                                .join(',') + ")");
+                            params.push.apply(params, ids.map(Number));
+                            paramIdx_1 += ids.length;
+                        }
+                    }
+                    // 如果專案 ID 存在，則添加到條件中
+                    if (projectId) {
+                        ids = projectId
+                            .split(',')
+                            .map(function (id) { return id.trim(); })
+                            .filter(Boolean);
+                        if (ids.length > 0) {
+                            // 使用 IN 條件來查詢多個專案 ID
+                            conditions.push("p.id IN (" + ids.map(function (_, i) { return "@param" + (paramIdx_1 + i); }).join(',') + ")");
+                            params.push.apply(params, ids.map(Number));
+                            paramIdx_1 += ids.length;
+                        }
+                    }
+                    // 如果有其他條件，可以在這裡添加
                     if (conditions.length > 0) {
+                        // 如果有條件，則在 SQL 查詢中添加 WHERE 子句
+                        // 使用 AND 來連接多個條件
                         sqlQuery += ' WHERE ' + conditions.join(' AND ');
                     }
-                    sqlQuery += ' GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt';
+                    sqlQuery +=
+                        ' GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt';
                     sqlQuery += ' ORDER BY p.createdAt DESC';
                     return [4 /*yield*/, db_1.query(sqlQuery, params)];
                 case 1:
                     projects = _a.sent();
+                    // 返回查詢結果
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
                             data: projects
@@ -100,11 +144,12 @@ function POST(request) {
                             status,
                             startDate,
                             endDate,
-                            managerId
+                            managerId,
                         ])];
                 case 2:
                     result = _a.sent();
-                    return [4 /*yield*/, db_1.query("SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.managerId,\n        tm.name as managerName,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n       FROM Projects p\n       LEFT JOIN TeamMembers tm ON p.managerId = tm.id\n       LEFT JOIN Tasks t ON p.id = t.projectId\n       WHERE p.id = @param0\n       GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt", [result[0].id])];
+                    return [4 /*yield*/, db_1.query("SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.managerId,\n        tm.name as managerName,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n       FROM Projects p\n       LEFT JOIN TeamMembers tm ON p.managerId = tm.id\n       LEFT JOIN Tasks t ON p.id = t.projectId\n       WHERE p.id = @param0\n       GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.managerId, tm.name, p.createdAt, p.updatedAt", [result[0].id] // 將新插入的專案 ID 作為參數傳入 避免 SQL 注入
+                        )];
                 case 3:
                     newProject = _a.sent();
                     return [2 /*return*/, server_1.NextResponse.json({
@@ -125,6 +170,11 @@ function POST(request) {
 }
 exports.POST = POST;
 // 更新專案
+// 用於函數處理PUT方法
+// @param0、@param2 等是參數佔位符
+// 這些佔位符會在執行查詢時被實際的參數值替換
+// 這樣可以避免 SQL 注入攻擊
+// 例如: @param0 = '專案名稱'，@param1 = '專案描述'
 function PUT(request) {
     return __awaiter(this, void 0, void 0, function () {
         var body, id, name, description, status, startDate, endDate, managerId, sqlQuery, updatedProject, error_3;
@@ -144,16 +194,22 @@ function PUT(request) {
                             startDate,
                             endDate,
                             managerId,
-                            id
+                            id,
                         ])];
                 case 2:
                     updatedProject = _a.sent();
+                    // 如果更新後的專案數量為 0，則表示沒有找到指定的專案
+                    // 這裡使用了 TypeScript 的類型斷言，確保 updatedProject 是一個 Project 類型的數組
+                    // 類型斷言寫法是 <Project[]>updatedProject 基本上是將 updatedProject 斷言為 Project 類型的數組
+                    // 這樣可以確保在後續操作中，TypeScript 能夠正確識別 updatedProject 的類型
+                    // 如果專案不存在，則返回 404 錯誤
                     if (updatedProject.length === 0) {
                         return [2 /*return*/, server_1.NextResponse.json({
                                 success: false,
                                 error: '找不到指定的專案'
                             }, { status: 404 })];
                     }
+                    // 返回更新後的專案資訊 返回success: true 表示更新成功
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
                             data: updatedProject[0]
@@ -190,6 +246,11 @@ function DELETE(request) {
                     return [4 /*yield*/, db_1.query("SELECT \n        p.id,\n        p.name,\n        p.description,\n        p.status,\n        p.startDate,\n        p.endDate,\n        p.createdAt,\n        p.updatedAt,\n        COUNT(t.id) as taskCount,\n        CASE \n          WHEN COUNT(t.id) = 0 THEN 0\n          ELSE CAST(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(t.id) * 100\n        END as averageProgress\n      FROM Projects p\n      LEFT JOIN Tasks t ON p.id = t.projectId\n      WHERE p.id = @param0\n      GROUP BY p.id, p.name, p.description, p.status, p.startDate, p.endDate, p.createdAt, p.updatedAt", [id])];
                 case 1:
                     projectToDelete = _a.sent();
+                    // if projectToDelete.length 為 0，表示找不到指定的專案
+                    // 這裡使用了 TypeScript 的類型斷言，確保 projectToDelete 是一個 Project 類型的數組
+                    // 類型斷言寫法是 <Project[]>projectToDelete 基本上是將 projectToDelete 斷言為 Project 類型的數組
+                    // 這樣可以確保在後續操作中，TypeScript 能夠正確識別 projectToDelete 的類型
+                    // 如果專案不存在，則返回 404 錯誤
                     if (projectToDelete.length === 0) {
                         return [2 /*return*/, server_1.NextResponse.json({
                                 success: false,
@@ -197,10 +258,15 @@ function DELETE(request) {
                             }, { status: 404 })];
                     }
                     // 執行刪除操作
+                    // 使用 DELETE 語句刪除專案
                     return [4 /*yield*/, db_1.query("DELETE FROM Projects WHERE id = @param0", [id])];
                 case 2:
                     // 執行刪除操作
+                    // 使用 DELETE 語句刪除專案
                     _a.sent();
+                    // 刪除成功後，返回被刪除的專案資訊
+                    // 這裡返回的是之前查詢到的專案資訊
+                    // 這樣可以在前端顯示被刪除的專案資訊，或者進行其他操作
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
                             data: projectToDelete[0]
