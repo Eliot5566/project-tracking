@@ -108,4 +108,13 @@
   "calendar.messages.week": "Week",
   "calendar.messages.day": "Day",
   "calendar.messages.agenda": "Agenda"
+  ,
+  "home.title": "Welcome to Project Tracking System",
+  "home.features.tasks.title": "Tasks",
+  "home.features.tasks.desc": "Easily track and manage tasks to improve efficiency.",
+  "home.features.progress.title": "Progress",
+  "home.features.progress.desc": "View project progress in real time to meet goals on time.",
+  "home.features.documents.title": "Documents",
+  "home.features.documents.desc": "Upload and manage documents with version history.",
+  "home.getStarted": "Get Started"
 }

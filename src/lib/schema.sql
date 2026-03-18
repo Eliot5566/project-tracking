@@ -27,6 +27,7 @@ CREATE TABLE SubTasks (
 );
 
 -- 跨部門協作請求表（Request）
+-- 每當任務需要跨部門協作時，相關人員可以提交一個請求，描述需要協作的內容和目標部門。
 CREATE TABLE Requests (
     id INT IDENTITY(1,1) PRIMARY KEY,
     taskId INT,
@@ -62,6 +63,7 @@ CREATE TABLE TeamMembers (
 );
 
 -- 任務表
+-- 每個任務都屬於一個專案，並且可以指派給一個團隊成員。任務有標題、描述、狀態、優先級、進度等屬性。
 CREATE TABLE Tasks (
     id INT IDENTITY(1,1) PRIMARY KEY,
     title NVARCHAR(200) NOT NULL,
@@ -96,6 +98,8 @@ CREATE TABLE CalendarEvents (
 );
 
 -- 通知表
+-- 通知可以是系統自動生成的（如任務狀態變更、截止日期提醒等），也可以是用戶手動創建的（如跨部門協作請求的回覆）。
+-- 每條通知都包含標題、內容、類型（如提醒、警告、信息等）、是否已讀等屬性。
 CREATE TABLE Notifications (
     id INT IDENTITY(1,1) PRIMARY KEY,
     title NVARCHAR(200) NOT NULL,

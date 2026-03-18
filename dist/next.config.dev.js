@@ -10,9 +10,8 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 var nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    serverActions: true
-  },
+  output: 'standalone',
+  // Server Actions 在 Next.js 14 之後預設可用，移除此設定以避免警告
   // 略過 TypeScript 型別錯誤以便先行建構（注意：可能造成執行期錯誤）
   typescript: {
     ignoreBuildErrors: true

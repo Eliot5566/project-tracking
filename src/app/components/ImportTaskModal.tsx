@@ -11,6 +11,8 @@ interface ImportTaskModalProps {
 const ImportTaskModal: React.FC<ImportTaskModalProps> = ({ open, onClose, onSuccess }) => {
   const [uploading, setUploading] = useState(false);
 
+
+  // 自定義上傳處理函數，將檔案包裝成 FormData 並發送到後端 API，根據回應顯示成功或失敗的訊息，並在完成後重置上傳狀態。
   const handleUpload = async (options: any) => {
     setUploading(true);
     const { file } = options;
@@ -39,6 +41,7 @@ const ImportTaskModal: React.FC<ImportTaskModalProps> = ({ open, onClose, onSucc
   return (
     <Modal
       title="批次匯入專案與任務"
+      // open 是 antd v4 的屬性，v5 改為 open 了，但為了兼容性，這裡同時支持 open 和 visible
       open={open}
       onCancel={onClose}
       footer={null}

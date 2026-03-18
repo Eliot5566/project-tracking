@@ -1,0 +1,13 @@
+sep=,
+日期,工作事項,作業內容,工時
+2026/2/9,建構設定修正,移除 next.config.js 的 experimental.serverActions 以符合 Next 14 相容性,2
+2026/2/9,建構錯誤排除,清理 src/app/**/dist 殘留並修復模組解析造成的 Module not found,1
+2026/2/9,Standalone 輸出啟用,在 next.config.js 設定 output: 'standalone' 以產出最小可搬移集,1
+2026/2/9,打包與啟動腳本,拷貝 .next/standalone、.next/static、public 至 RPTOUT 並建立 start.ps1,2
+2026/2/9,部署指南整理,提供 VM 上 git clone/build/start 與反向代理建議、環境變數清單,1
+2026/2/10,啟動方式校正,更正 standalone 啟動改用 node server.js 而非 npm run start,1
+2026/2/10,資料庫連線分析,診斷 ESOCKET 連線失敗並提出固定埠 1433 與具名執行個體兩種方案,2
+2026/2/10,DB 連線強化,調整 src/lib/db.ts 支援 DB_INSTANCE/instanceName；補充 SQL Server 設定指引,1
+2026/2/11,首頁多語系完善,導入 useI18n 於首頁並新增三語系字串（標題/卡片/按鈕）,2
+2026/2/11,重新打包覆蓋,使用 robocopy 鏡像複製最新 standalone/static/public 至 RPTOUT,1
+2026/2/12,工作日誌彙整,建立工作日誌 CSV 並記錄近期前後端與部署調整,1

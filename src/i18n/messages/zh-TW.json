@@ -108,4 +108,13 @@
   "calendar.messages.week": "週",
   "calendar.messages.day": "日",
   "calendar.messages.agenda": "列表"
+  ,
+  "home.title": "歡迎使用專案追蹤系統",
+  "home.features.tasks.title": "任務管理",
+  "home.features.tasks.desc": "輕鬆追蹤和管理專案中的各項任務，提高工作效率。",
+  "home.features.progress.title": "進度追蹤",
+  "home.features.progress.desc": "即時查看專案進度，確保按時完成目標。",
+  "home.features.documents.title": "文件管理",
+  "home.features.documents.desc": "上傳和管理專案文件，追蹤歷史版本。",
+  "home.getStarted": "開始使用"
 }

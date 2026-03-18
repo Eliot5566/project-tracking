@@ -17,6 +17,7 @@ interface Project {
   updatedAt: string;
 }
 
+// 表單數據接口
 interface ProjectFormData {
   name: string;
   description: string;
@@ -26,6 +27,7 @@ interface ProjectFormData {
   managerId: number;
 }
 
+// 新增/編輯專案的表單組件 - 包含專案名稱、描述、狀態、開始/結束日期、負責人等欄位
 interface ProjectFormProps {
   open: boolean;
   onClose: () => void;
@@ -33,11 +35,14 @@ interface ProjectFormProps {
   initialData?: Project;
 }
 
+// 團隊成員接口
 interface TeamMember {
   id: number;
   name: string;
 }
 
+// 專案表單組件，支持新增和編輯專案，並且會從後端獲取團隊成員列表供選擇專案負責人使用。
+// 表單提交時會驗證必填欄位，並將日期格式化後傳遞給父組件處理。
 export default function ProjectForm({
   open,
   onClose,
@@ -65,6 +70,8 @@ export default function ProjectForm({
     fetchTeamMembers();
   }, []);
 
+  // 當表單打開或初始數據變化時，將初始數據填充到表單中，並將日期字符串轉換為 dayjs 
+  // 對象以供 DatePicker 使用。
   useEffect(() => {
     if (open && initialData) {
       form.setFieldsValue({
@@ -77,6 +84,7 @@ export default function ProjectForm({
     }
   }, [open, initialData, form]);
 
+  // 處理表單提交，將日期格式化為 'YYYY-MM-DD' 後傳遞給父組件的 onSubmit 函數。
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);

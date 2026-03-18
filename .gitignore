@@ -54,3 +54,6 @@ public/uploads/*
 /lib/*
 
 .next/cache
+
+# prevent accidental local transpile outputs inside app directory
+src/app/**/dist/

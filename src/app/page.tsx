@@ -5,38 +5,36 @@ import { Row, Col, Card, Typography, Button } from 'antd';
 import { ProjectOutlined, LineChartOutlined, TeamOutlined, FileOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useI18n } from './components/I18nProvider';
 
 const { Title, Text } = Typography;
 
-const features = [
-  {
-    title: '任務管理',
-    description: '輕鬆追蹤和管理專案中的各項任務，提高工作效率。',
-    icon: <ProjectOutlined style={{ fontSize: 40 }} />, 
-    path: '/task'
-  },
-  {
-    title: '進度追蹤',
-    description: '即時查看專案進度，確保按時完成目標。',
-    icon: <LineChartOutlined style={{ fontSize: 40 }} />, 
-    path: '/progress'
-  },
-  // {
-  //   title: '團隊管理',
-  //   description: '管理團隊成員資料。',
-  //   icon: <TeamOutlined style={{ fontSize: 40 }} />, 
-  //   path: '/team'
-  // },
-  {
-    title: '文件管理',
-    description: '上傳和管理專案文件，追蹤歷史版本。',
-    icon: <FileOutlined style={{ fontSize: 40 }} />, 
-    path: '/documents'
-  },
-];
+function buildFeatures(t: (k: string) => string) {
+  return [
+    {
+      title: t('home.features.tasks.title'),
+      description: t('home.features.tasks.desc'),
+      icon: <ProjectOutlined style={{ fontSize: 40 }} />,
+      path: '/task'
+    },
+    {
+      title: t('home.features.progress.title'),
+      description: t('home.features.progress.desc'),
+      icon: <LineChartOutlined style={{ fontSize: 40 }} />,
+      path: '/progress'
+    },
+    {
+      title: t('home.features.documents.title'),
+      description: t('home.features.documents.desc'),
+      icon: <FileOutlined style={{ fontSize: 40 }} />,
+      path: '/documents'
+    },
+  ];
+}
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useI18n();
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isLogin = localStorage.getItem('isLogin') === '1';
@@ -80,11 +78,11 @@ export default function Home() {
             textShadow: '0 2px 16px #b3d1ff44',
           }}
         >
-          歡迎使用專案追蹤系統
+          {t('home.title')}
         </Title>
 
         <Row gutter={[32, 32]} justify="center" align="middle">
-          {features.map((feature) => (
+          {buildFeatures(t).map((feature) => (
             <Col xs={24} sm={12} md={8} key={feature.title}>
               <Card
                 hoverable
@@ -146,7 +144,7 @@ export default function Home() {
                   }}
                   size="large"
                 >
-                  開始使用
+                  {t('home.getStarted')}
                 </Button>
               </Card>
             </Col>

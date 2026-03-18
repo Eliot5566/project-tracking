@@ -108,4 +108,13 @@
   "calendar.messages.week": "週",
   "calendar.messages.day": "日",
   "calendar.messages.agenda": "予定"
+  ,
+  "home.title": "プロジェクト追跡システムへようこそ",
+  "home.features.tasks.title": "タスク管理",
+  "home.features.tasks.desc": "タスクを簡単に追跡・管理し、作業効率を向上します。",
+  "home.features.progress.title": "進捗管理",
+  "home.features.progress.desc": "プロジェクトの進捗をリアルタイムで確認し、目標達成を支援します。",
+  "home.features.documents.title": "ドキュメント管理",
+  "home.features.documents.desc": "ドキュメントのアップロードと管理、履歴バージョンを追跡します。",
+  "home.getStarted": "はじめる"
 }

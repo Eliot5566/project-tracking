@@ -31,6 +31,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(saved);
   }, []);
 
+  // 如果果有變更 locale，則同步更新 <html lang>
+  // 設置語言同步到localstorage和<html lang> 
   const setLocale = (l: Locale) => {
     setLocaleState(l);
     if (typeof window !== 'undefined') {
@@ -42,11 +44,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // useMemo緩存t函數，避免每次渲染都重新創建
   const t = useMemo(() => {
     const messages = allMessages[locale] || allMessages['zh-TW'];
-    return (key: string) => messages[key] ?? key;
+    return (key: string) => messages[key] ?? key;   
   }, [locale]);
 
+  
   const value: I18nContextType = { locale, setLocale, t };
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
