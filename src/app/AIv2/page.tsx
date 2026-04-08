@@ -756,7 +756,7 @@ export default function AIForgingThreadingSuite() {
                           <Col span={10}>
                             {tpl.left.map(code=> <Block key={code} code={code} />)}
                           </Col>
-                     <Col span={4}>
+                           <Col span={4}>
                             <div style={{height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6}}>
                             <Typography.Text strong>{(area==='A'||area==='D')? 'Heading' : 'Threading'}</Typography.Text>
                             <Typography.Text type="secondary">Rolling</Typography.Text>

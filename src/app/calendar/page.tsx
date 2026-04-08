@@ -9,6 +9,56 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const localizer = dayjsLocalizer(dayjs as any);
 
+const toDateKey = (d: Date | dayjs.Dayjs) => dayjs(d).format('YYYY-MM-DD');
+
+const buildDateRange = (start: string, end: string) => {
+  const list: string[] = [];
+  let cur = dayjs(start);
+  const last = dayjs(end);
+  while (cur.isBefore(last) || cur.isSame(last, 'day')) {
+    list.push(cur.format('YYYY-MM-DD'));
+    cur = cur.add(1, 'day');
+  }
+  return list;
+};
+
+type NamedDateRange = { name: string; start: string; end: string };
+
+// 2026 正確版：連假 + 寒暑假（補班日：無）
+const TW_SPECIAL_DATE_RANGES_2026: NamedDateRange[] = [
+  { name: '春節連假', start: '2026-02-14', end: '2026-02-22' },
+  { name: '228 連假', start: '2026-02-27', end: '2026-03-01' },
+  { name: '清明連假', start: '2026-04-03', end: '2026-04-06' },
+  { name: '勞動節連假', start: '2026-05-01', end: '2026-05-03' },
+  { name: '端午連假', start: '2026-06-19', end: '2026-06-21' },
+  { name: '教師節 + 中秋連假', start: '2026-09-25', end: '2026-09-28' },
+  { name: '國慶連假', start: '2026-10-09', end: '2026-10-11' },
+  { name: '光復節連假', start: '2026-10-24', end: '2026-10-26' },
+  { name: '行憲紀念日連假', start: '2026-12-25', end: '2026-12-27' }
+
+];
+
+// 同一天可能落在多個區間，先加入者優先（例如春節優先於寒假）
+const TW_SPECIAL_DATE_LABELS_2026 = (() => {
+  const map = new Map<string, string>();
+  for (const range of TW_SPECIAL_DATE_RANGES_2026) {
+    const dates = buildDateRange(range.start, range.end);
+    for (const d of dates) {
+      if (!map.has(d)) map.set(d, range.name);
+    }
+  }
+  return map;
+})();
+
+const isWeekend = (date: Date) => {
+  const day = dayjs(date).day();
+  return day === 0 || day === 6;
+};
+
+const getSpecialDateLabel = (date: Date) => TW_SPECIAL_DATE_LABELS_2026.get(toDateKey(date));
+
+const isSpecialDate = (date: Date) => !!getSpecialDateLabel(date);
+
 interface CalendarEventDTO {
   id: number;
   title: string;
@@ -145,6 +195,11 @@ export default function CalendarPage() {
     return { style: { backgroundColor: color, border: 'none', color: '#fff' } };
   };
 
+  const dayPropGetter = (date: Date) => {
+    if (isWeekend(date) || isSpecialDate(date)) return { className: 'calendar-holiday-daybg' };
+    return {};
+  };
+
   const onSelectSlot = (slotInfo: any) => {
   console.log('[Calendar] onSelectSlot:', slotInfo);
     // 僅在從編輯轉成新增時重置
@@ -192,6 +247,31 @@ export default function CalendarPage() {
             onSelectSlot={onSelectSlot}
             onSelectEvent={onSelectEvent}
             eventPropGetter={eventPropGetter}
+            dayPropGetter={dayPropGetter}
+            components={{
+              month: {
+                header: ({ date, label }: any) => (
+                  <span
+                    className={isWeekend(date) ? 'calendar-holiday-text' : ''}
+                    title={isWeekend(date) ? '週末' : undefined}
+                  >
+                    {label}
+                  </span>
+                ),
+                dateHeader: ({ date, label }: any) => {
+                  const specialLabel = getSpecialDateLabel(date);
+                  const weekend = isWeekend(date);
+                  return (
+                    <span
+                      className={weekend || !!specialLabel ? 'calendar-holiday-text' : ''}
+                      title={specialLabel || (weekend ? '週末' : undefined)}
+                    >
+                      {label}
+                    </span>
+                  );
+                },
+              },
+            }}
             messages={{ today: '今天', previous: '上一頁', next: '下一頁', month: '月', week: '週', day: '日', agenda: '列表' }}
           />
         </div>

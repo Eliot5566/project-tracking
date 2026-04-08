@@ -45,7 +45,7 @@ var db_1 = require("@/lib/db");
  */
 function GET(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var searchParams, projectId, assignedTo, status, priority, sqlQuery, params, conditions, tasks, error_1;
+        var searchParams, projectId, assignedTo, status, priority, search, startDate, endDate, sqlQuery, params, conditions, paramIdx_1, ids, ids, tasks, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -55,24 +55,58 @@ function GET(request) {
                     assignedTo = searchParams.get('assignedTo');
                     status = searchParams.get('status');
                     priority = searchParams.get('priority');
+                    search = searchParams.get('search');
+                    startDate = searchParams.get('startDate');
+                    endDate = searchParams.get('endDate');
                     sqlQuery = "\n      SELECT t.*, \n             p.name as projectName,\n             tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n    ";
                     params = [];
                     conditions = [];
+                    paramIdx_1 = 0;
                     if (projectId) {
-                        conditions.push('t.projectId = @param0');
-                        params.push(parseInt(projectId));
+                        ids = projectId.split(',').map(function (id) { return id.trim(); }).filter(Boolean);
+                        if (ids.length > 0) {
+                            conditions.push("t.projectId IN (" + ids.map(function (_, i) { return "@param" + (paramIdx_1 + i); }).join(',') + ")");
+                            params.push.apply(params, ids.map(Number));
+                            paramIdx_1 += ids.length;
+                        }
                     }
                     if (assignedTo) {
-                        conditions.push('t.assignedTo = @param1');
-                        params.push(parseInt(assignedTo));
+                        ids = assignedTo.split(',').map(function (id) { return id.trim(); }).filter(Boolean);
+                        if (ids.length > 0) {
+                            conditions.push("t.assignedTo IN (" + ids.map(function (_, i) { return "@param" + (paramIdx_1 + i); }).join(',') + ")");
+                            params.push.apply(params, ids.map(Number));
+                            paramIdx_1 += ids.length;
+                        }
                     }
                     if (status) {
-                        conditions.push('t.status = @param2');
+                        conditions.push("t.status = @param" + paramIdx_1);
                         params.push(status);
+                        paramIdx_1++;
                     }
                     if (priority) {
-                        conditions.push('t.priority = @param3');
+                        conditions.push("t.priority = @param" + paramIdx_1);
                         params.push(priority);
+                        paramIdx_1++;
+                    }
+                    if (search) {
+                        conditions.push("(t.title LIKE @param" + paramIdx_1 + " OR t.description LIKE @param" + paramIdx_1 + ")");
+                        params.push("%" + search + "%");
+                        paramIdx_1++;
+                    }
+                    if (startDate && endDate) {
+                        conditions.push("CAST(t.dueDate AS date) BETWEEN @param" + paramIdx_1 + " AND @param" + (paramIdx_1 + 1));
+                        params.push(startDate, endDate);
+                        paramIdx_1 += 2;
+                    }
+                    else if (startDate) {
+                        conditions.push("CAST(t.dueDate AS date) >= @param" + paramIdx_1);
+                        params.push(startDate);
+                        paramIdx_1++;
+                    }
+                    else if (endDate) {
+                        conditions.push("CAST(t.dueDate AS date) <= @param" + paramIdx_1);
+                        params.push(endDate);
+                        paramIdx_1++;
                     }
                     if (conditions.length > 0) {
                         sqlQuery += ' WHERE ' + conditions.join(' AND ');
@@ -103,7 +137,7 @@ exports.GET = GET;
  */
 function POST(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var body, title, description, projectId, assignedTo, status, priority, dueDate, sqlQuery, result, newTask, error_2;
+        var body, title, description, projectId, assignedTo, status, priority, startDate, dueDate, sqlQuery, result, newTask, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -111,8 +145,8 @@ function POST(request) {
                     return [4 /*yield*/, request.json()];
                 case 1:
                     body = _a.sent();
-                    title = body.title, description = body.description, projectId = body.projectId, assignedTo = body.assignedTo, status = body.status, priority = body.priority, dueDate = body.dueDate;
-                    sqlQuery = "\n      INSERT INTO Tasks (\n        title, description, projectId, assignedTo, status, priority, dueDate,\n        createdAt, updatedAt\n      )\n      VALUES (\n        @param0, @param1, @param2, @param3, @param4, @param5, @param6,\n        GETDATE(), GETDATE()\n      );\n      \n      SELECT SCOPE_IDENTITY() as id;\n    ";
+                    title = body.title, description = body.description, projectId = body.projectId, assignedTo = body.assignedTo, status = body.status, priority = body.priority, startDate = body.startDate, dueDate = body.dueDate;
+                    sqlQuery = "\n      INSERT INTO Tasks (\n        title, description, projectId, assignedTo, status, priority, startDate, dueDate,\n        createdAt, updatedAt\n      )\n      VALUES (\n        @param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7,\n        GETDATE(), GETDATE()\n      );\n      \n      SELECT SCOPE_IDENTITY() as id;\n    ";
                     return [4 /*yield*/, db_1.query(sqlQuery, [
                             title,
                             description,
@@ -120,6 +154,7 @@ function POST(request) {
                             assignedTo,
                             status,
                             priority,
+                            startDate,
                             dueDate
                         ])];
                 case 2:
@@ -147,7 +182,7 @@ exports.POST = POST;
 // 更新任務
 function PUT(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var body, id, title, description, projectId, assignedTo, status, priority, dueDate, progress, finalProgress, sqlQuery, updatedTask, error_3;
+        var body, id, title, description, projectId, assignedTo, status, priority, startDate, dueDate, progress, finalProgress, sqlQuery, updatedTask, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -155,9 +190,9 @@ function PUT(request) {
                     return [4 /*yield*/, request.json()];
                 case 1:
                     body = _a.sent();
-                    id = body.id, title = body.title, description = body.description, projectId = body.projectId, assignedTo = body.assignedTo, status = body.status, priority = body.priority, dueDate = body.dueDate, progress = body.progress;
+                    id = body.id, title = body.title, description = body.description, projectId = body.projectId, assignedTo = body.assignedTo, status = body.status, priority = body.priority, startDate = body.startDate, dueDate = body.dueDate, progress = body.progress;
                     finalProgress = status === 'completed' ? 100 : progress || 0;
-                    sqlQuery = "\n      UPDATE Tasks\n      SET \n        title = @param0,\n        description = @param1,\n        projectId = @param2,\n        assignedTo = @param3,\n        status = @param4,\n        priority = @param5,\n        dueDate = @param6,\n        progress = @param7,\n        updatedAt = GETDATE()\n      WHERE id = @param8;\n      \n      SELECT \n        t.id,\n        t.title,\n        t.description,\n        t.projectId,\n        t.assignedTo,\n        t.status,\n        t.priority,\n        t.dueDate,\n        t.progress,\n        t.createdAt,\n        t.updatedAt,\n        p.name as projectName,\n        tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n      WHERE t.id = @param8;\n    ";
+                    sqlQuery = "\n      UPDATE Tasks\n      SET \n        title = @param0,\n        description = @param1,\n        projectId = @param2,\n        assignedTo = @param3,\n        status = @param4,\n        priority = @param5,\n        startDate = @param6,\n        dueDate = @param7,\n        progress = @param8,\n        updatedAt = GETDATE()\n      WHERE id = @param9;\n      \n      SELECT \n        t.id,\n        t.title,\n        t.description,\n        t.projectId,\n        t.assignedTo,\n        t.status,\n        t.priority,\n        t.startDate,\n        t.dueDate,\n        t.progress,\n        t.createdAt,\n        t.updatedAt,\n        p.name as projectName,\n        tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n      WHERE t.id = @param9;\n    ";
                     return [4 /*yield*/, db_1.query(sqlQuery, [
                             title,
                             description,
@@ -165,6 +200,7 @@ function PUT(request) {
                             assignedTo,
                             status,
                             priority,
+                            startDate,
                             dueDate,
                             finalProgress,
                             id
@@ -197,11 +233,11 @@ exports.PUT = PUT;
 // 刪除任務
 function DELETE(request) {
     return __awaiter(this, void 0, void 0, function () {
-        var searchParams, id, sqlQuery, deletedTask, error_4;
+        var searchParams, id, taskToDelete, error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 2, , 3]);
+                    _a.trys.push([0, 3, , 4]);
                     searchParams = new URL(request.url).searchParams;
                     id = searchParams.get('id');
                     if (!id) {
@@ -210,28 +246,32 @@ function DELETE(request) {
                                 error: '缺少任務 ID'
                             }, { status: 400 })];
                     }
-                    sqlQuery = "\n      DELETE FROM Tasks\n      WHERE id = @param0;\n      \n      SELECT t.*, p.name as projectName, tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n      WHERE t.id = @param0;\n    ";
-                    return [4 /*yield*/, db_1.query(sqlQuery, [id])];
+                    return [4 /*yield*/, db_1.query("\n      SELECT t.*, p.name as projectName, tm.name as assignedToName\n      FROM Tasks t\n      LEFT JOIN Projects p ON t.projectId = p.id\n      LEFT JOIN TeamMembers tm ON t.assignedTo = tm.id\n      WHERE t.id = @param0;\n    ", [id])];
                 case 1:
-                    deletedTask = _a.sent();
-                    if (deletedTask.length === 0) {
+                    taskToDelete = _a.sent();
+                    if (!taskToDelete.length) {
                         return [2 /*return*/, server_1.NextResponse.json({
                                 success: false,
                                 error: '找不到指定的任務'
                             }, { status: 404 })];
                     }
+                    // 執行刪除
+                    return [4 /*yield*/, db_1.query("DELETE FROM Tasks WHERE id = @param0;", [id])];
+                case 2:
+                    // 執行刪除
+                    _a.sent();
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: true,
-                            data: deletedTask[0]
+                            data: taskToDelete[0]
                         })];
-                case 2:
+                case 3:
                     error_4 = _a.sent();
                     console.error('刪除任務失敗:', error_4);
                     return [2 /*return*/, server_1.NextResponse.json({
                             success: false,
                             error: '刪除任務失敗'
                         }, { status: 500 })];
-                case 3: return [2 /*return*/];
+                case 4: return [2 /*return*/];
             }
         });
     });

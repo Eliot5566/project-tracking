@@ -48,6 +48,11 @@ export default function Navbar({ darkMode }: NavbarProps) {
       label: '工作日誌',
     },
     {
+      key: '/todos',
+      icon: <FileTextOutlined />,
+      label: '代辦事項',
+    },
+    {
       key: '/team',
       icon: <TeamOutlined />,
       label: '團隊管理',

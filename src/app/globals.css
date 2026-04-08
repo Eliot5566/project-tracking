@@ -56,3 +56,16 @@ a {
     color-scheme: dark;
   }
 }
+
+/* 行事曆：週末 / 國定假日 / 寒暑假紅字 */
+.calendar-holiday-text {
+  color: #cf1322 !important;
+  font-weight: 700;
+  cursor: help;
+}
+
+.rbc-month-view .calendar-holiday-daybg .rbc-date-cell,
+.rbc-month-view .calendar-holiday-daybg .rbc-date-cell > a,
+.rbc-month-view .calendar-holiday-daybg .rbc-button-link {
+  color: #cf1322 !important;
+}

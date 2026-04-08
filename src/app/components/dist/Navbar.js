@@ -34,6 +34,11 @@ function Navbar(_a) {
             label: '工作日誌'
         },
         {
+            key: '/todos',
+            icon: React.createElement(icons_1.FileTextOutlined, null),
+            label: '代辦事項'
+        },
+        {
             key: '/team',
             icon: React.createElement(icons_2.TeamOutlined, null),
             label: '團隊管理'

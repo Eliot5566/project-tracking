@@ -24,6 +24,8 @@ interface TaskQueryParams {
   assignedTo?: number;
   status?: string;
   priority?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 /**
@@ -38,6 +40,8 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
     const search = searchParams.get('search');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     let sqlQuery = `
       SELECT t.*, 
@@ -81,6 +85,19 @@ export async function GET(request: Request) {
     if (search) {
       conditions.push(`(t.title LIKE @param${paramIdx} OR t.description LIKE @param${paramIdx})`);
       params.push(`%${search}%`);
+      paramIdx++;
+    }
+    if (startDate && endDate) {
+      conditions.push(`CAST(t.dueDate AS date) BETWEEN @param${paramIdx} AND @param${paramIdx + 1}`);
+      params.push(startDate, endDate);
+      paramIdx += 2;
+    } else if (startDate) {
+      conditions.push(`CAST(t.dueDate AS date) >= @param${paramIdx}`);
+      params.push(startDate);
+      paramIdx++;
+    } else if (endDate) {
+      conditions.push(`CAST(t.dueDate AS date) <= @param${paramIdx}`);
+      params.push(endDate);
       paramIdx++;
     }
 
